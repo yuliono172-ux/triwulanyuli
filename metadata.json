@@ -1,0 +1,6 @@
+{
+  "name": "Aplikasi Raport Digital",
+  "description": "Aplikasi manajemen nilai, rekap penilaian siswa, dan cetak lembar raport sekolah yang fleksibel dan praktis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

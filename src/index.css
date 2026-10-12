@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+  
+  html, body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Force background colors and borders to print accurately */
+  th, td, div, span, table {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
