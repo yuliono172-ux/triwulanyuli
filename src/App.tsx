@@ -70,6 +70,11 @@ import {
   compareTwoQuarters,
   getGradeFromScore
 } from './utils/quarterAnalysis';
+import {
+  predictNextQuarterAchievement,
+  StudentQuarterPredictionResult,
+  DimensionPredictionItem
+} from './utils/quarterPrediction';
 import { PerbandinganTriwulan } from './components/PerbandinganTriwulan';
 import { db, ref, set, onValue, off, remove, TeacherRecord, AppSettings } from './firebase';
 import { useToast } from './components/Toast';
@@ -1677,6 +1682,7 @@ export default function App() {
   const [spiderHoveredAspect, setSpiderHoveredAspect] = useState<string | null>(null);
   const [trendChartMode, setTrendChartMode] = useState<'area' | 'bar' | 'dimension'>('area');
   const [selectedTrendAspectId, setSelectedTrendAspectId] = useState<string>('kognitif');
+  const [showPredictionInSpider, setShowPredictionInSpider] = useState<boolean>(true);
 
   const kopFileInputRef = useRef<HTMLInputElement | null>(null);
   const dbKopFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -2697,6 +2703,17 @@ export default function App() {
       </tr>
     `).join('');
 
+    // Hitung Prediksi Potensi Capaian Triwulan Berikutnya
+    const studentTrends = getStudentQuarterTrends(student);
+    const prediction = predictNextQuarterAchievement(student, activeTriwulan, studentTrends.quarters);
+
+    // Proyeksi Polygon Points
+    const predPts = prediction.aspectPredictions.map((asp, i) => {
+      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / numAspects;
+      const radius = (asp.predictedScore / 5) * R;
+      return `${(CX + radius * Math.cos(angle)).toFixed(1)},${(CY + radius * Math.sin(angle)).toFixed(1)}`;
+    }).join(' ');
+
     return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -2713,7 +2730,7 @@ export default function App() {
 <body>
   <div style="text-align: center; margin-bottom: 12px; border-bottom: 2px solid #0f172a; padding-bottom: 8px;">
     <h2 style="margin: 0; font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">LAPORAN ANALISIS GRAFIK RADAR (SPIDER CHART)</h2>
-    <h3 style="margin: 3px 0 0 0; font-size: 12px; font-weight: 800; color: #475569;">Capaian 9 Dimensi Perkembangan Peserta Didik</h3>
+    <h3 style="margin: 3px 0 0 0; font-size: 12px; font-weight: 800; color: #475569;">Capaian 9 Dimensi Perkembangan Peserta Didik & Proyeksi Triwulan Berikutnya</h3>
   </div>
 
   <table style="width: 100%; border: none; font-size: 11px; font-weight: bold; margin-bottom: 12px;">
@@ -2742,27 +2759,45 @@ export default function App() {
     <svg viewBox="0 0 540 540" style="width: 100%; max-width: 440px; height: auto;">
       ${gridPolygons}
       ${axisLines}
+      <!-- Poligon Riil Siswa -->
       <polygon points="${dataPts}" fill="#0d9488" fill-opacity="0.3" stroke="#0d9488" stroke-width="3" />
+      <!-- Poligon Garis Putus-Putus Proyeksi Triwulan Berikutnya -->
+      <polygon points="${predPts}" fill="#6366f1" fill-opacity="0.12" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="5 3" />
       ${vertexDots}
       ${labels}
     </svg>
+    <div style="font-size: 10px; font-weight: bold; margin-top: 4px; color: #475569;">
+      <span style="color: #0d9488;">■ Capaian Riil (${analysis.averageScore})</span> &nbsp;•&nbsp; 
+      <span style="color: #6366f1;">- - Proyeksi Potensi ${prediction.targetQuarterShort} (${prediction.predictedAverageScore})</span>
+    </div>
   </div>
 
   <!-- KPI SUMMARY -->
   <div style="display: flex; gap: 8px; margin-bottom: 12px; text-align: center;">
     <div style="flex: 1; border: 1px solid #0d9488; background: #f0fdfa; border-radius: 8px; padding: 8px;">
-      <div style="font-size: 10px; color: #0f766e; font-weight: bold; text-transform: uppercase;">Skor Rerata</div>
+      <div style="font-size: 10px; color: #0f766e; font-weight: bold; text-transform: uppercase;">Skor Rerata Kini</div>
       <div style="font-size: 18px; font-weight: 900; color: #0d9488;">${analysis.averageScore} <span style="font-size: 11px;">/ 5.0</span></div>
       <div style="font-size: 10px; font-weight: bold; color: #115e59;">Predikat: ${analysis.overallGrade}</div>
     </div>
+    <div style="flex: 1; border: 1px solid #6366f1; background: #eef2ff; border-radius: 8px; padding: 8px;">
+      <div style="font-size: 10px; color: #4338ca; font-weight: bold; text-transform: uppercase;">Estimasi ${prediction.targetQuarterShort}</div>
+      <div style="font-size: 18px; font-weight: 900; color: #4f46e5;">${prediction.predictedAverageScore} <span style="font-size: 11px;">/ 5.0</span></div>
+      <div style="font-size: 10px; font-weight: bold; color: #3730a3;">Prospek: ${prediction.averageDiff >= 0 ? '+' : ''}${prediction.averageDiff} (${prediction.predictedOverallGrade})</div>
+    </div>
     <div style="flex: 1; border: 1px solid #16a34a; background: #f0fdf4; border-radius: 8px; padding: 8px;">
-      <div style="font-size: 10px; color: #15803d; font-weight: bold; text-transform: uppercase;">Dimensi Terkuat</div>
-      <div style="font-size: 12px; font-weight: 900; color: #166534; margin-top: 4px;">${analysis.topStrengths.map(s => s.nama).slice(0, 2).join(' & ')}</div>
+      <div style="font-size: 10px; color: #15803d; font-weight: bold; text-transform: uppercase;">Akselerasi Tertinggi</div>
+      <div style="font-size: 12px; font-weight: 900; color: #166534; margin-top: 4px;">${prediction.topAcceleratingAspects[0]?.nama || '-'} (+${prediction.topAcceleratingAspects[0]?.scoreDiff})</div>
     </div>
     <div style="flex: 1; border: 1px solid #ea580c; background: #fff7ed; border-radius: 8px; padding: 8px;">
-      <div style="font-size: 10px; color: #c2410c; font-weight: bold; text-transform: uppercase;">Fokus Pendampingan</div>
-      <div style="font-size: 12px; font-weight: 900; color: #9a3412; margin-top: 4px;">${analysis.topWeaknesses.map(w => w.nama).slice(0, 2).join(' & ')}</div>
+      <div style="font-size: 10px; color: #c2410c; font-weight: bold; text-transform: uppercase;">Fokus Pengawalan</div>
+      <div style="font-size: 12px; font-weight: 900; color: #9a3412; margin-top: 4px;">${prediction.priorityInterventionAspects[0]?.nama || '-'}</div>
     </div>
+  </div>
+
+  <!-- KOTAK ANALISIS PREDIKSI POTENSI -->
+  <div class="card" style="border-left: 4px solid #6366f1; background: #f8fafc;">
+    <strong style="color: #4338ca; font-size: 11px; text-transform: uppercase;">🔮 Analisis Prediksi Potensi Capaian (${prediction.targetQuarterLabel}):</strong>
+    <p style="font-size: 10.5px; line-height: 1.45; margin: 4px 0 0 0; color: #1e293b;">${prediction.summaryDescription}</p>
   </div>
 
   <!-- KEKUATAN & KELEMAHAN -->
@@ -6276,6 +6311,8 @@ export default function App() {
                   {/* SPIDER CHART & ASPECT INSPECTOR */}
                   {(() => {
                     const spiderAnalysis = getStudentSpiderAnalysis(selectedStudent);
+                    const trendData = getStudentQuarterTrends(selectedStudent);
+                    const predictionData = predictNextQuarterAchievement(selectedStudent, activeTriwulan, trendData.quarters);
                     const activeAspectId = selectedSpiderAspect || spiderAnalysis.aspects[0].id;
                     const currentAspect = spiderAnalysis.aspects.find(a => a.id === activeAspectId) || spiderAnalysis.aspects[0];
 
@@ -6307,6 +6344,19 @@ export default function App() {
                     });
 
                     const dataPolygonPoints = aspectPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+                    const predictedAspectPoints = predictionData.aspectPredictions.map((asp, i) => {
+                      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / numAspects;
+                      const radius = (asp.predictedScore / 5) * R;
+                      const x = CX + radius * Math.cos(angle);
+                      const y = CY + radius * Math.sin(angle);
+                      return {
+                        ...asp,
+                        x,
+                        y
+                      };
+                    });
+                    const predictedPolygonPoints = predictedAspectPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
                     return (
                       <div className="space-y-4">
@@ -6415,7 +6465,7 @@ export default function App() {
                                   );
                                 })}
 
-                                {/* Poligon Data Siswa */}
+                                {/* Poligon Data Siswa Riil */}
                                 <polygon
                                   points={dataPolygonPoints}
                                   fill="url(#spiderFillGradient)"
@@ -6424,6 +6474,31 @@ export default function App() {
                                   filter="url(#glowEffect)"
                                   className="transition-all duration-300"
                                 />
+
+                                {/* Poligon Garis Putus-Putus Proyeksi Potensi (Jika Aktif) */}
+                                {showPredictionInSpider && (
+                                  <g>
+                                    <polygon
+                                      points={predictedPolygonPoints}
+                                      fill="rgba(99, 102, 241, 0.16)"
+                                      stroke="#6366f1"
+                                      strokeWidth="2.6"
+                                      strokeDasharray="6 3"
+                                      className="transition-all duration-300"
+                                    />
+                                    {predictedAspectPoints.map((p) => (
+                                      <circle
+                                        key={`pred-dot-${p.id}`}
+                                        cx={p.x}
+                                        cy={p.y}
+                                        r="4"
+                                        fill="#6366f1"
+                                        stroke="#ffffff"
+                                        strokeWidth="1.5"
+                                      />
+                                    ))}
+                                  </g>
+                                )}
 
                                 {/* Titik Vertex (Simpul Sudut) */}
                                 {aspectPoints.map((p) => {
@@ -6498,7 +6573,41 @@ export default function App() {
                                 })}
                               </svg>
                             </div>
-                            <span className="text-[11px] text-slate-500 mt-2 font-medium print:hidden">
+
+                            {/* Tombol Toggle & Legenda Garis Proyeksi */}
+                            <div className="flex flex-wrap items-center justify-center gap-2 mt-2.5 print:hidden">
+                              <button
+                                type="button"
+                                onClick={() => setShowPredictionInSpider(!showPredictionInSpider)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border shadow-2xs ${
+                                  showPredictionInSpider
+                                    ? 'bg-indigo-600 text-white border-indigo-700 ring-2 ring-indigo-200'
+                                    : 'bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50'
+                                }`}
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>
+                                  {showPredictionInSpider
+                                    ? 'Sembunyikan Garis Proyeksi'
+                                    : `Tampilkan Garis Proyeksi (${predictionData.targetQuarterShort})`}
+                                </span>
+                              </button>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold mt-2">
+                              <div className="flex items-center gap-1.5 text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                                <span className="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+                                <span>Capaian Riil ({spiderAnalysis.averageScore} / 5.0)</span>
+                              </div>
+                              {showPredictionInSpider && (
+                                <div className="flex items-center gap-1.5 text-indigo-800 bg-indigo-50 px-2.5 py-0.5 rounded border border-indigo-200">
+                                  <span className="w-4 h-0.5 border-t-2 border-dashed border-indigo-600 inline-block"></span>
+                                  <span>Proyeksi Potensi {predictionData.targetQuarterShort} ({predictionData.predictedAverageScore} / 5.0)</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <span className="text-[11px] text-slate-500 mt-1 font-medium print:hidden text-center">
                               💡 Tip: Klik titik sudut atau label teks untuk melihat penjelasan rincian aspek
                             </span>
                           </div>
@@ -6654,6 +6763,246 @@ export default function App() {
                           </div>
                           <div className="bg-white/90 p-2.5 rounded-lg border border-amber-200 text-[11px] text-amber-950 leading-normal">
                             <strong>🤝 Catatan Kolaborasi:</strong> Lakukan pembiasaan konsisten berdurasi pendek namun rutin di rumah, dampingi dengan pendekatan positif tanpa membebani mental siswa.
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ======================================================== */}
+                  {/* 🔮 ANALISIS PREDIKSI POTENSI CAPAIAN TRIWULAN BERIKUTNYA */}
+                  {/* BERDASARKAN TREN HISTORIS SPIDER CHART                   */}
+                  {/* ======================================================== */}
+                  {(() => {
+                    const trendData = getStudentQuarterTrends(selectedStudent);
+                    const predictionData = predictNextQuarterAchievement(selectedStudent, activeTriwulan, trendData.quarters);
+
+                    return (
+                      <div className="bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/60 border-2 border-indigo-300 rounded-2xl p-4 sm:p-6 space-y-5 shadow-sm print:break-inside-avoid">
+                        {/* Header Prediksi */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100 pb-3">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
+                                <Sparkles className="w-4 h-4" />
+                              </span>
+                              <h4 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-wide">
+                                🔮 Analisis Prediksi Potensi Capaian Triwulan Berikutnya
+                              </h4>
+                            </div>
+                            <p className="text-xs text-slate-600 font-medium">
+                              Model proyeksi berbasis akselerasi & tren kenaikan nilai historis 9 dimensi pada Spider Chart
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-900 text-xs font-black border border-indigo-300">
+                              Target: {predictionData.targetQuarterLabel}
+                            </span>
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black border border-emerald-300">
+                              Akurasi Model: {predictionData.confidenceLevel}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 4 Kartu Metrik Prediksi */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block">Capaian Terkini ({predictionData.currentQuarterLabel.split(' ')[0]})</span>
+                            <div className="text-xl font-black text-slate-700 mt-0.5">
+                              {predictionData.currentAverageScore} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
+                            </div>
+                            <span className="text-[10px] text-slate-600 font-semibold block">
+                              Predikat: <strong className="text-slate-800">{predictionData.currentOverallGrade}</strong>
+                            </span>
+                          </div>
+
+                          <div className="bg-white p-3 rounded-xl border-2 border-indigo-400 shadow-2xs">
+                            <span className="text-[10px] font-bold text-indigo-700 uppercase block">Estimasi Skor Berikutnya</span>
+                            <div className="text-xl font-black text-indigo-700 mt-0.5">
+                              {predictionData.predictedAverageScore} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
+                            </div>
+                            <span className="text-[10px] text-indigo-900 font-bold block">
+                              Prospek Predikat: <strong className="text-indigo-800">{predictionData.predictedOverallGrade}</strong>
+                            </span>
+                          </div>
+
+                          <div className={`p-3 rounded-xl border shadow-2xs ${
+                            predictionData.averageDiff >= 0
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                              : 'bg-rose-50 border-rose-300 text-rose-950'
+                          }`}>
+                            <span className="text-[10px] font-bold uppercase block">Potensi Pertumbuhan</span>
+                            <div className={`text-xl font-black mt-0.5 flex items-center gap-1 ${
+                              predictionData.averageDiff >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                            }`}>
+                              <span>{predictionData.averageDiff >= 0 ? `+${predictionData.averageDiff}` : predictionData.averageDiff}</span>
+                              <span className="text-xs font-bold">({predictionData.averagePercentChange >= 0 ? `+${predictionData.averagePercentChange}` : predictionData.averagePercentChange}%)</span>
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider block">
+                              {predictionData.readinessStatus}
+                            </span>
+                          </div>
+
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block">Peluang Lonjakan Terbesar</span>
+                            <div className="text-xs font-black text-indigo-900 truncate mt-1">
+                              {predictionData.topAcceleratingAspects[0]?.nama || '-'}
+                            </div>
+                            <span className="text-[10px] text-emerald-600 font-black block">
+                              +{predictionData.topAcceleratingAspects[0]?.scoreDiff} poin (+{predictionData.topAcceleratingAspects[0]?.percentChange}%)
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Kotak Narasi Ringkasan Prediksi */}
+                        <div className="bg-white p-3.5 rounded-xl border border-indigo-200 shadow-2xs flex items-start gap-3 text-xs">
+                          <span className="text-2xl mt-0.5">💡</span>
+                          <div className="space-y-1 text-slate-700">
+                            <strong className="text-indigo-950 font-black uppercase text-xs block">
+                              Ikhtisar Prospek Perkembangan Siswa:
+                            </strong>
+                            <p className="leading-relaxed">
+                              {predictionData.summaryDescription}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Dua Kolom: 3 Aspek Akselerasi & 2 Aspek Prioritas Intervensi */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Kolom Akselerasi Unggulan */}
+                          <div className="bg-white p-4 rounded-xl border border-emerald-300 shadow-2xs space-y-3">
+                            <div className="flex items-center gap-2 border-b border-emerald-100 pb-2 text-emerald-900">
+                              <TrendingUp className="w-4 h-4 text-emerald-600" />
+                              <h5 className="font-black text-xs uppercase tracking-wider">
+                                🚀 3 Dimensi dengan Potensi Lonjakan Tertinggi
+                              </h5>
+                            </div>
+                            <div className="space-y-2">
+                              {predictionData.topAcceleratingAspects.map((asp) => (
+                                <div key={asp.id} className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200 text-xs space-y-1">
+                                  <div className="flex items-center justify-between font-bold">
+                                    <span className="text-slate-900">{asp.no}. {asp.nama}</span>
+                                    <span className="text-emerald-700 font-black bg-emerald-100 px-2 py-0.5 rounded text-[11px]">
+                                      {asp.currentScore} ➔ {asp.predictedScore} (+{asp.scoreDiff})
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-600 leading-normal">
+                                    {asp.insight}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Kolom Fokus Pendampingan */}
+                          <div className="bg-white p-4 rounded-xl border border-amber-300 shadow-2xs space-y-3">
+                            <div className="flex items-center gap-2 border-b border-amber-100 pb-2 text-amber-950">
+                              <Shield className="w-4 h-4 text-amber-600" />
+                              <h5 className="font-black text-xs uppercase tracking-wider">
+                                🎯 Area Prioritas Intervensi & Pengawalan
+                              </h5>
+                            </div>
+                            <div className="space-y-2">
+                              {predictionData.priorityInterventionAspects.map((asp) => (
+                                <div key={asp.id} className="p-2.5 rounded-lg bg-amber-50/60 border border-amber-200 text-xs space-y-1">
+                                  <div className="flex items-center justify-between font-bold">
+                                    <span className="text-slate-900">{asp.no}. {asp.nama}</span>
+                                    <span className="text-amber-800 font-black bg-amber-100 px-2 py-0.5 rounded text-[11px]">
+                                      Estimasi {asp.predictedScore} ({asp.predictedGrade})
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-600 leading-normal">
+                                    {asp.insight}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Tabel Komparasi Prediksi 9 Dimensi */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                            <span className="uppercase font-black text-xs text-indigo-950">
+                              📊 Matriks Estimasi Capaian 9 Dimensi (Saat Ini vs Target Prediksi):
+                            </span>
+                            <span className="text-[11px] text-slate-500">Skala Penilaian 1.0 - 5.0</span>
+                          </div>
+                          <div className="overflow-x-auto border border-indigo-200 rounded-xl bg-white shadow-2xs">
+                            <table className="w-full text-xs border-collapse">
+                              <thead>
+                                <tr className="bg-indigo-950 text-white text-center font-bold">
+                                  <th className="p-2 border-r border-indigo-800 w-10">NO</th>
+                                  <th className="p-2 border-r border-indigo-800 text-left min-w-[130px]">DIMENSI ASPEK</th>
+                                  <th className="p-2 border-r border-indigo-800 w-24">SKOR KINI</th>
+                                  <th className="p-2 border-r border-indigo-800 w-28 bg-indigo-900">PROYEKSI NILAI</th>
+                                  <th className="p-2 border-r border-indigo-800 w-24">ESTIMASI DELTA</th>
+                                  <th className="p-2 border-r border-indigo-800 w-28">STATUS PROSPEK</th>
+                                  <th className="p-2 text-left min-w-[240px]">ARAH PENDAMPINGAN</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {predictionData.aspectPredictions.map((asp) => (
+                                  <tr key={asp.id} className="hover:bg-indigo-50/40 transition">
+                                    <td className="p-2 text-center font-bold text-slate-600 border-r border-slate-200">{asp.no}</td>
+                                    <td className="p-2 font-black text-slate-900 uppercase border-r border-slate-200">{asp.nama}</td>
+                                    <td className="p-2 text-center font-bold text-slate-700 border-r border-slate-200">
+                                      {asp.currentScore} ({asp.currentGrade})
+                                    </td>
+                                    <td className="p-2 text-center font-black text-indigo-700 bg-indigo-50/60 border-r border-slate-200">
+                                      {asp.predictedScore} <span className="text-[10px] text-slate-500">({asp.predictedGrade})</span>
+                                    </td>
+                                    <td className={`p-2 text-center font-black border-r border-slate-200 ${
+                                      asp.scoreDiff > 0 ? 'text-emerald-700' : asp.scoreDiff < 0 ? 'text-rose-700' : 'text-slate-600'
+                                    }`}>
+                                      {asp.scoreDiff > 0 ? `+${asp.scoreDiff}` : asp.scoreDiff}
+                                    </td>
+                                    <td className="p-2 text-center border-r border-slate-200">
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                        asp.status === 'MELOJIT'
+                                          ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                                          : asp.status === 'MENINGKAT'
+                                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                          : asp.status === 'STABIL'
+                                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                      }`}>
+                                        {asp.status === 'MELOJIT' ? '🚀 Melonjak' : asp.status === 'MENINGKAT' ? '📈 Meningkat' : asp.status === 'STABIL' ? '⚖️ Stabil' : '⚠️ Bimbingan'}
+                                      </span>
+                                    </td>
+                                    <td className="p-2 text-slate-700 text-[11px] leading-relaxed">
+                                      {asp.insight}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Rencana Aksi Kolaboratif Guru & Orang Tua */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                            <strong className="text-slate-900 font-black uppercase text-[11px] flex items-center gap-1.5">
+                              🎓 Rekomendasi Tindak Lanjut Guru (Sekolah):
+                            </strong>
+                            <ul className="space-y-1 text-slate-700 text-[11px] list-disc list-inside leading-relaxed">
+                              {predictionData.actionPlanTeacher.map((act, i) => (
+                                <li key={i}>{act}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                            <strong className="text-slate-900 font-black uppercase text-[11px] flex items-center gap-1.5">
+                              🏡 Rekomendasi Pendampingan Orang Tua (Rumah):
+                            </strong>
+                            <ul className="space-y-1 text-slate-700 text-[11px] list-disc list-inside leading-relaxed">
+                              {predictionData.actionPlanParents.map((act, i) => (
+                                <li key={i}>{act}</li>
+                              ))}
+                            </ul>
                           </div>
                         </div>
                       </div>
