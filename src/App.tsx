@@ -2864,13 +2864,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#a6a6a6] text-slate-900 font-sans flex flex-col items-center justify-start p-2 sm:p-6">
+    <div className="app-shell min-h-screen bg-[#a6a6a6] text-slate-900 font-sans flex flex-col items-center justify-start p-2 sm:p-6">
       {/* Wrapper Luar */}
-      <div className="w-full max-w-[1520px] bg-[#d9d9d9] rounded-2xl shadow-2xl border-4 border-slate-400 overflow-hidden flex flex-col">
+      <div className="app-frame w-full max-w-[1520px] bg-[#d9d9d9] rounded-2xl shadow-2xl border-4 border-slate-400 overflow-hidden flex flex-col">
         {/* ========================================================= */}
         {/* 1. HEADER MERAH HOME PERSIS SCREENSHOT                    */}
         {/* ========================================================= */}
-        <div className="relative bg-[#ff0000] h-20 sm:h-24 flex items-center justify-between px-3 sm:px-6 shadow-inner border-b-4 border-red-700">
+        <div className="app-header relative bg-[#ff0000] h-20 sm:h-24 flex items-center justify-between px-3 sm:px-6 shadow-inner border-b-4 border-red-700">
           <div className="flex items-center gap-2 sm:gap-3 z-10">
             <button
               onClick={() => {
@@ -2971,12 +2971,12 @@ export default function App() {
         {/* ========================================================= */}
         {/* 2. BODY UTAMA: SIDEBAR PERMANEN + AREA KONTEN             */}
         {/* ========================================================= */}
-        <div className="flex flex-col md:flex-row flex-1 min-h-[820px] bg-[#d9d9d9]">
+        <div className="app-workspace flex flex-col md:flex-row flex-1 min-h-[820px] bg-[#d9d9d9]">
           {/* ======================================================= */}
           {/* PERMANENT LEFT-HAND SIDEBAR (COLLAPSIBLE ACCORDION)       */}
           {/* ======================================================= */}
           <aside
-            className={`print:hidden w-full md:w-64 lg:w-72 bg-gradient-to-b from-[#1e2530] via-[#171d26] to-[#0f1319] text-white border-r-4 border-slate-600 shadow-2xl flex flex-col shrink-0 select-none ${
+            className={`app-sidebar print:hidden w-full md:w-64 lg:w-72 bg-gradient-to-b from-[#1e2530] via-[#171d26] to-[#0f1319] text-white border-r-4 border-slate-600 shadow-2xl flex flex-col shrink-0 select-none ${
               isMobileSidebarOpen ? 'block' : 'hidden md:flex'
             }`}
           >
@@ -3302,7 +3302,7 @@ export default function App() {
           {/* ========================================================= */}
           {/* 3. AREA KONTEN MASING-MASING HALAMAN                      */}
           {/* ========================================================= */}
-          <main className="p-3 sm:p-6 flex-1 min-w-0 overflow-y-auto bg-[#ececec]">
+          <main className="app-main p-3 sm:p-6 flex-1 min-w-0 overflow-y-auto bg-[#ececec]">
           {/* ======================================================= */}
           {/* TAB 0: HOME / DASHBOARD TRIWULAN AKTIF                  */}
           {/* ======================================================= */}
@@ -3425,11 +3425,11 @@ export default function App() {
             const radarPolygonPointsStr = radarDataPoints.map((p) => `${p.x},${p.y}`).join(' ');
 
             return (
-              <div className="space-y-5">
+              <div className="dashboard-page space-y-5">
                 {/* =================================================== */}
                 {/* 1. HEADER DASHBOARD PENILAIAN TRIWULAN AKTIF         */}
                 {/* =================================================== */}
-                <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl border-4 border-[#00a2ed] p-5 sm:p-6 shadow-xl text-white">
+                <div className="dashboard-hero app-dashboard-hero bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl border-4 border-[#00a2ed] p-5 sm:p-6 shadow-xl text-white">
                   <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2">
@@ -3509,9 +3509,9 @@ export default function App() {
                 {/* =================================================== */}
                 {/* 2. BARIS ATAS: 3 KARTU STATUS & PERKEMBANGAN        */}
                 {/* =================================================== */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="dashboard-kpis grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* KARTU 1: STATUS KELENGKAPAN PENILAIAN */}
-                  <div className="bg-white rounded-xl border-2 border-slate-400 p-4 shadow-md flex flex-col justify-between">
+                  <div className="dashboard-kpi dashboard-kpi-completion bg-white rounded-xl border-2 border-slate-400 p-4 shadow-md flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -3563,7 +3563,7 @@ export default function App() {
                   </div>
 
                   {/* KARTU 2: RERATA CAPAIAN & PREDIKAT */}
-                  <div className="bg-white rounded-xl border-2 border-slate-400 p-4 shadow-md flex flex-col justify-between">
+                  <div className="dashboard-kpi dashboard-kpi-average bg-white rounded-xl border-2 border-slate-400 p-4 shadow-md flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -3600,7 +3600,7 @@ export default function App() {
                   </div>
 
                   {/* KARTU 3: RINGKASAN PERKEMBANGAN DARI TRIWULAN SEBELUMNYA */}
-                  <div className="bg-white rounded-xl border-2 border-slate-400 p-4 shadow-md flex flex-col justify-between">
+                  <div className="dashboard-kpi dashboard-kpi-trend bg-white rounded-xl border-2 border-slate-400 p-4 shadow-md flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -3676,7 +3676,7 @@ export default function App() {
                 {/* =================================================== */}
                 {/* 3. GRID 9 ASPEK PENILAIAN (KARTU RINGKASAN)        */}
                 {/* =================================================== */}
-                <div className="bg-white rounded-2xl border-2 border-slate-400 p-4 sm:p-5 shadow-lg space-y-4">
+                <div className="dashboard-aspects-panel bg-white rounded-2xl border-2 border-slate-400 p-4 sm:p-5 shadow-lg space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
                     <div>
                       <h3 className="text-sm sm:text-base font-black uppercase text-slate-900 tracking-wider">
@@ -3698,7 +3698,7 @@ export default function App() {
                         <div
                           key={`card-aspek-${asp.id}`}
                           onClick={() => handleSelectAspectSubmenu(activeTriwulan, asp.id)}
-                          className="rounded-xl border-2 border-slate-300 hover:border-slate-500 bg-slate-50 hover:bg-white p-3.5 shadow-sm hover:shadow-md transition cursor-pointer group flex flex-col justify-between"
+                          className="dashboard-aspect-card rounded-xl border-2 border-slate-300 hover:border-slate-500 bg-slate-50 hover:bg-white p-3.5 shadow-sm hover:shadow-md transition cursor-pointer group flex flex-col justify-between"
                         >
                           <div>
                             <div className="flex items-center justify-between gap-2">
@@ -3778,7 +3778,7 @@ export default function App() {
                 {/* =================================================== */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* PREVIEW RADAR / SPIDER CHART */}
-                  <div className="bg-white rounded-2xl border-2 border-slate-400 p-4 sm:p-5 shadow-lg flex flex-col justify-between">
+                  <div className="dashboard-detail-card dashboard-radar-card bg-white rounded-2xl border-2 border-slate-400 p-4 sm:p-5 shadow-lg flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
                         <div className="flex items-center gap-2">
@@ -3906,7 +3906,7 @@ export default function App() {
                   </div>
 
                   {/* BAGIAN PERHATIAN & REKOMENDASI */}
-                  <div className="bg-white rounded-2xl border-2 border-slate-400 p-4 sm:p-5 shadow-lg flex flex-col justify-between">
+                  <div className="dashboard-detail-card dashboard-recommendations-card bg-white rounded-2xl border-2 border-slate-400 p-4 sm:p-5 shadow-lg flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
                         <div className="flex items-center gap-2">

@@ -114,7 +114,7 @@ export const PerbandinganTriwulan: React.FC<PerbandinganTriwulanProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border-2 border-slate-400 p-4 sm:p-6 space-y-6">
+    <div className="comparison-dashboard bg-white rounded-xl shadow-lg border-2 border-slate-400 p-4 sm:p-6 space-y-6">
       {/* 1. HEADER HALAMAN & KONTROL NAVIGASI */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4 print:hidden">
         <div className="flex items-center gap-3">
@@ -208,7 +208,7 @@ export const PerbandinganTriwulan: React.FC<PerbandinganTriwulanProps> = ({
       </div>
 
       {/* 2. PANEL PILIHAN PERBANDINGAN (REQUIREMENT 9) */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 rounded-xl border-2 border-indigo-400 text-white shadow-md print:hidden space-y-3">
+      <div className="comparison-controls bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 rounded-xl border-2 border-indigo-400 text-white shadow-md print:hidden space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-800/80 pb-2.5">
           <div className="flex items-center gap-2">
             <span className="text-xl">⚖️</span>
