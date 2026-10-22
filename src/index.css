@@ -7,6 +7,16 @@
   }
 }
 
+.report-assessment-table {
+  border-collapse: collapse;
+  border: 1px solid #000;
+}
+
+.report-assessment-table th,
+.report-assessment-table td {
+  border: 1px solid #000 !important;
+}
+
 @media screen {
   :root {
     color-scheme: light;

@@ -4057,7 +4057,7 @@ export default function App() {
               </div>
 
               <div className="overflow-x-auto border-2 border-black rounded-lg">
-                <table className="w-full text-xs border-collapse">
+                <table className="report-assessment-table w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-white font-bold border-b border-black text-center">
                       <th rowSpan={3} className="border-r border-black p-2 w-10">NO</th>
