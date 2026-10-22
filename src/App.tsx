@@ -1005,6 +1005,27 @@ export const TABLE_THEMES: Record<string, TableThemeConfig> = {
   }
 };
 
+const SCHOOL_REPORT_PALETTE = {
+  header: '#d0cece',
+  gradeHeader: '#bf8f00',
+  gradeCell: '#ffd965',
+  aspects: {
+    kognitif: { number: '#d0cece', aspect: '#d0cece', indicator: '#f7cbac' },
+    afektif: { number: '#ff6699', aspect: '#ff6699', indicator: '#ff6699' },
+    psikomotor: { number: '#a8d08d', aspect: '#c5e0b3', indicator: '#a8d08d' },
+    sosial: { number: '#d581ab', aspect: '#d581ab', indicator: '#d581ab' },
+    islamicLiteracy: { number: '#d5dce4', aspect: '#d5dce4', indicator: '#d5dce4' },
+    bilingual: { number: '#d06b4c', aspect: '#d06b4c', indicator: '#d06b4c' },
+    talents: { number: '#18a5a8', aspect: '#18a5a8', indicator: '#18a5a8' },
+    experience: { number: '#a8d08d', aspect: '#c5e0b3', indicator: '#c5e0b3' },
+    inklusivitas: { number: '#ff5050', aspect: '#ff5050', indicator: '#ff5050' }
+  } as const
+};
+
+const getSchoolAspectPalette = (aspectId: string) =>
+  SCHOOL_REPORT_PALETTE.aspects[aspectId as keyof typeof SCHOOL_REPORT_PALETTE.aspects] ??
+  { number: SCHOOL_REPORT_PALETTE.header, aspect: SCHOOL_REPORT_PALETTE.header, indicator: SCHOOL_REPORT_PALETTE.header };
+
 export const FONT_OPTIONS = [
   { id: 'Arial', name: 'Arial (Standar Bersih)', css: 'Arial, Helvetica, sans-serif' },
   { id: 'Times New Roman', name: 'Times New Roman (Resmi / Formal)', css: '"Times New Roman", Times, serif' },
@@ -1841,13 +1862,12 @@ export default function App() {
     const chosenSizeKey = options?.fontSize || reportFontSize;
     const sizeConf = FONT_SIZES.find((s) => s.id === chosenSizeKey) || FONT_SIZES[1];
     const isGray = (options?.colorMode || printColorMode) === 'grayscale';
-
     const headerBgColor = isGray ? '#334155' : themeConf.headerBg;
-    const subHeaderBgColor = isGray ? '#cbd5e1' : themeConf.subHeaderBg;
-    const tableBorderColor = isGray ? '#000000' : themeConf.borderColor;
+    const tableBorderColor = '#000000';
     const accentBgColor = isGray ? '#f1f5f9' : themeConf.accentBg;
 
     const rowsHtml = ASPEK_LIST.map((aspek) => {
+      const aspectPalette = getSchoolAspectPalette(aspek.id);
       if (isDetailMode) {
         return aspek.indikatorList
           .map((ind, indIdx) => {
@@ -1855,24 +1875,24 @@ export default function App() {
             const val = sec[ind.key] || '';
 
             const noTd = indIdx === 0
-              ? `<td rowspan="${aspek.indikatorList.length}" style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; vertical-align: middle; width: 35px; background-color: #ffffff;">${aspek.no}</td>`
+              ? `<td rowspan="${aspek.indikatorList.length}" style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; vertical-align: middle; width: 35px; background-color: ${aspectPalette.number};">${aspek.no}</td>`
               : '';
             const aspekTd = indIdx === 0
-              ? `<td rowspan="${aspek.indikatorList.length}" style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; text-transform: uppercase; font-size: ${sizeConf.tableFont}; vertical-align: middle; width: 130px; background-color: #ffffff;">${aspek.nama}</td>`
+              ? `<td rowspan="${aspek.indikatorList.length}" style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; text-transform: uppercase; font-size: ${sizeConf.tableFont}; vertical-align: middle; width: 130px; background-color: ${aspectPalette.aspect};">${aspek.nama}</td>`
               : '';
 
             return `
               <tr style="background-color: #ffffff;">
                 ${noTd}
                 ${aspekTd}
-                <td style="border: 1px solid ${tableBorderColor}; text-align: left; padding: 4px 6px; font-size: ${sizeConf.tableFont}; color: #000;">
+                <td style="border: 1px solid ${tableBorderColor}; text-align: left; padding: 4px 6px; font-size: ${sizeConf.tableFont}; color: #000; background-color: ${aspectPalette.indicator};">
                   ${ind.labelLengkap}
                 </td>
-                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 85px; color: #000;">${val === 'Exceptional' ? '✓' : ''}</td>
-                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 45px; color: #000;">${val === 'A' ? '✓' : ''}</td>
-                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 45px; color: #000;">${val === 'B' ? '✓' : ''}</td>
-                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 45px; color: #000;">${val === 'C' ? '✓' : ''}</td>
-                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 55px; color: #000;">${val === 'Defisit' ? '✓' : ''}</td>
+                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 85px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${val === 'Exceptional' ? '✓' : ''}</td>
+                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 45px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${val === 'A' ? '✓' : ''}</td>
+                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 45px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${val === 'B' ? '✓' : ''}</td>
+                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 45px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${val === 'C' ? '✓' : ''}</td>
+                <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; width: 55px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${val === 'Defisit' ? '✓' : ''}</td>
               </tr>
             `;
           })
@@ -1882,14 +1902,14 @@ export default function App() {
       const grade = getAspectGrade(student, aspek.id);
       return `
         <tr style="background-color: #ffffff;">
-          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; width: 35px;">${aspek.no}</td>
-          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: ${sizeConf.tableFont}; text-transform: uppercase; width: 130px;">${aspek.nama}</td>
-          <td style="border: 1px solid ${tableBorderColor}; text-align: left; padding: 5px 8px; font-size: ${sizeConf.tableFont};">${aspek.kategori}</td>
-          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000;">${grade === 'Exceptional' ? '✓' : ''}</td>
-          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000;">${grade === 'A' ? '✓' : ''}</td>
-          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000;">${grade === 'B' ? '✓' : ''}</td>
-          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000;">${grade === 'C' ? '✓' : ''}</td>
-          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000;">${grade === 'Defisit' ? '✓' : ''}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; width: 35px; background-color: ${aspectPalette.number};">${aspek.no}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: ${sizeConf.tableFont}; text-transform: uppercase; width: 130px; background-color: ${aspectPalette.aspect};">${aspek.nama}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: left; padding: 5px 8px; font-size: ${sizeConf.tableFont}; background-color: ${aspectPalette.indicator};">${aspek.kategori}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${grade === 'Exceptional' ? '✓' : ''}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${grade === 'A' ? '✓' : ''}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${grade === 'B' ? '✓' : ''}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${grade === 'C' ? '✓' : ''}</td>
+          <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${grade === 'Defisit' ? '✓' : ''}</td>
         </tr>
       `;
     }).join('');
@@ -1989,17 +2009,17 @@ export default function App() {
     const tableHeaderHtml = tblStyle === 'screenshot2' ? `
       <thead>
         <tr style="border-bottom: 1.5px solid ${tableBorderColor}; text-align: center; font-weight: 900; font-size: ${sizeConf.tableFont};">
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 6px 4px; width: 35px; background-color: ${headerBgColor}; color: ${themeConf.headerText};" rowspan="2">NO</th>
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 6px 8px; width: 130px; background-color: ${headerBgColor}; color: ${themeConf.headerText};" rowspan="2">ASPEK</th>
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 6px 8px; text-align: center; background-color: ${headerBgColor}; color: ${themeConf.headerText};" rowspan="2">INDIKATOR KEBERHASILAN</th>
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 5px; text-align: center; background-color: ${headerBgColor}; color: ${themeConf.headerText};" colspan="5">PENILAIAN</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 6px 4px; width: 35px; background-color: ${SCHOOL_REPORT_PALETTE.header}; color: #000000;" rowspan="2">NO</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 6px 8px; width: 130px; background-color: ${SCHOOL_REPORT_PALETTE.header}; color: #000000;" rowspan="2">ASPEK</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 6px 8px; text-align: center; background-color: ${SCHOOL_REPORT_PALETTE.header}; color: #000000;" rowspan="2">INDIKATOR KEBERHASILAN</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 5px; text-align: center; background-color: ${SCHOOL_REPORT_PALETTE.header}; color: #000000;" colspan="5">PENILAIAN</th>
         </tr>
-        <tr style="border-bottom: 1.5px solid ${tableBorderColor}; text-align: center; font-weight: 900; font-size: ${sizeConf.tableFont}; background-color: ${subHeaderBgColor}; color: ${themeConf.subHeaderText};">
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 95px; background-color: ${subHeaderBgColor}; color: ${themeConf.subHeaderText};">Exceptional</th>
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 45px; background-color: ${subHeaderBgColor}; color: ${themeConf.subHeaderText};">A</th>
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 45px; background-color: ${subHeaderBgColor}; color: ${themeConf.subHeaderText};">B</th>
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 45px; background-color: ${subHeaderBgColor}; color: ${themeConf.subHeaderText};">C</th>
-          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 60px; background-color: ${subHeaderBgColor}; color: ${themeConf.subHeaderText};">Defisit</th>
+        <tr style="border-bottom: 1.5px solid ${tableBorderColor}; text-align: center; font-weight: 900; font-size: ${sizeConf.tableFont}; background-color: ${SCHOOL_REPORT_PALETTE.gradeHeader}; color: #000000;">
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 95px; background-color: ${SCHOOL_REPORT_PALETTE.gradeHeader}; color: #000000;">Exceptional</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 45px; background-color: ${SCHOOL_REPORT_PALETTE.gradeHeader}; color: #000000;">A</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 45px; background-color: ${SCHOOL_REPORT_PALETTE.gradeHeader}; color: #000000;">B</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 45px; background-color: ${SCHOOL_REPORT_PALETTE.gradeHeader}; color: #000000;">C</th>
+          <th style="border: 1.5px solid ${tableBorderColor}; padding: 4px; width: 60px; background-color: ${SCHOOL_REPORT_PALETTE.gradeHeader}; color: #000000;">Defisit</th>
         </tr>
       </thead>
     ` : `
@@ -7449,167 +7469,6 @@ export default function App() {
                 /* 2. TAMPILAN LEMBAR RAPOR RESMI (FORMAT ASLI SEKOLAH)   */
                 /* ====================================================== */
                 <React.Fragment>
-                  {/* BANNER UPLOAD KOP SURAT SEKOLAH */}
-                  {!uploadedKopImage ? (
-                    <div className="max-w-[210mm] mx-auto mb-3 bg-amber-50 border-2 border-dashed border-amber-400 p-3 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs print:hidden shadow-xs">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-2xl">🏫</span>
-                        <div>
-                          <p className="font-bold text-amber-950">Gunakan Kop Surat Sekolah Anda Sendiri</p>
-                          <p className="text-amber-800 text-[11px]">Unggah gambar kop surat resmi (.PNG / .JPG) agar lembar cetak 100% sama persis dengan berkas asli Anda.</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => kopFileInputRef.current?.click()}
-                        className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow shrink-0 cursor-pointer"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Upload File Kop
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="max-w-[210mm] mx-auto mb-3 bg-emerald-50 border border-emerald-400 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs print:hidden shadow-xs">
-                      <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                        <span className="text-base">✓</span>
-                        <span>Kop Surat Unggahan Anda sedang aktif dan terpasang pada lembar cetak rapor.</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => kopFileInputRef.current?.click()}
-                          className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded font-bold text-[11px] cursor-pointer"
-                        >
-                          Ganti Gambar Kop
-                        </button>
-                        <button
-                          onClick={handleRemoveUploadedKop}
-                          className="px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 border border-red-300 rounded font-bold text-[11px] cursor-pointer"
-                        >
-                          Gunakan Kop Standar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ======================================================== */}
-                  {/* TOOLBAR PERSONALISASI LEMBAR LAPORAN (FONT, UKURAN, WARNA) */}
-                  {/* ======================================================== */}
-                  <div className="max-w-[210mm] mx-auto mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-2 border-indigo-400 rounded-2xl p-4 sm:p-5 text-white shadow-md print:hidden space-y-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/20 pb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-indigo-500/30 rounded-xl border border-indigo-400/40">
-                          <Palette className="w-5 h-5 text-indigo-300" />
-                        </div>
-                        <div>
-                          <h4 className="font-black text-sm sm:text-base uppercase tracking-wide text-white flex items-center gap-2">
-                            <span>Personalisasi Lembar Laporan</span>
-                            <span className="px-2 py-0.5 rounded-full bg-indigo-500/40 text-indigo-200 text-[10px] font-bold border border-indigo-400/30">
-                              Gambar 2
-                            </span>
-                          </h4>
-                          <p className="text-slate-300 text-xs">
-                            Atur jenis font, ukuran huruf, dan tema warna tabel pada lembar rapor cetak
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setReportFontFamily('Arial');
-                          setReportFontSize('base');
-                          setTableThemeColor('default');
-                          setPrintStatus('Pengaturan font dan tema tabel dikembalikan ke standar awal!');
-                          setTimeout(() => setPrintStatus(null), 3500);
-                        }}
-                        className="px-3 py-1 bg-white/10 hover:bg-white/20 text-slate-200 border border-white/20 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                        title="Kembalikan jenis font, ukuran, dan tema warna ke standar awal"
-                      >
-                        ↺ Reset ke Standar
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
-                      {/* 1. JENIS FONT */}
-                      <div className="bg-black/40 p-3 rounded-xl border border-white/15 space-y-1.5">
-                        <label className="font-extrabold text-indigo-300 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
-                          <Type className="w-3.5 h-3.5" /> 1. Jenis Font Dokumen:
-                        </label>
-                        <select
-                          value={reportFontFamily}
-                          onChange={(e) => setReportFontFamily(e.target.value as any)}
-                          className="w-full bg-slate-900 border border-white/30 text-white rounded-lg px-2.5 py-1.5 text-xs font-bold focus:border-indigo-400 focus:outline-none cursor-pointer"
-                        >
-                          {FONT_OPTIONS.map((font) => (
-                            <option key={font.id} value={font.id} className="bg-slate-900 text-white">
-                              {font.name}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[10px] text-slate-400">
-                          Font aktif: <strong className="text-white">{FONT_OPTIONS.find(f => f.id === reportFontFamily)?.name}</strong>
-                        </p>
-                      </div>
-
-                      {/* 2. UKURAN FONT */}
-                      <div className="bg-black/40 p-3 rounded-xl border border-white/15 space-y-1.5">
-                        <label className="font-extrabold text-indigo-300 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
-                          <span>🔤</span> 2. Ukuran Huruf:
-                        </label>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {FONT_SIZES.map((sz) => (
-                            <button
-                              key={sz.id}
-                              type="button"
-                              onClick={() => setReportFontSize(sz.id as any)}
-                              className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition text-center cursor-pointer ${
-                                reportFontSize === sz.id
-                                  ? 'bg-indigo-600 text-white border-white shadow-xs font-black'
-                                  : 'bg-white/10 text-slate-300 border-white/20 hover:bg-white/20 hover:text-white'
-                              }`}
-                            >
-                              {sz.label}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-slate-400">
-                          Tabel: {FONT_SIZES.find(s => s.id === reportFontSize)?.tableFont} • Dokumen: {FONT_SIZES.find(s => s.id === reportFontSize)?.bodyFont}
-                        </p>
-                      </div>
-
-                      {/* 3. TEMA WARNA TABEL */}
-                      <div className="bg-black/40 p-3 rounded-xl border border-white/15 space-y-1.5">
-                        <label className="font-extrabold text-indigo-300 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
-                          <Palette className="w-3.5 h-3.5" /> 3. Warna pada Tabel:
-                        </label>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {Object.values(TABLE_THEMES).map((thm) => {
-                            const isSelected = tableThemeColor === thm.id;
-                            return (
-                              <button
-                                key={thm.id}
-                                type="button"
-                                onClick={() => setTableThemeColor(thm.id)}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-white text-slate-950 border-white shadow-md ring-2 ring-indigo-400 font-black scale-102'
-                                    : 'bg-white/10 text-slate-200 border-white/20 hover:bg-white/20'
-                                }`}
-                                title={thm.name}
-                              >
-                                <span
-                                  className="w-3.5 h-3.5 rounded-full border border-black/30 shrink-0 inline-block shadow-xs"
-                                  style={{ backgroundColor: thm.subHeaderBg }}
-                                />
-                                <span className="truncate max-w-[85px]">{thm.name.split(' ')[0]}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <p className="text-[10px] text-slate-400">
-                          Tema aktif: <strong className="text-white">{TABLE_THEMES[tableThemeColor]?.name || 'Standar Excel'}</strong>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* ======================================================== */}
                   {/* LEMBAR RAPOR CETAK RESMI (STANDAR A4/F4 SIAP CETAK/PDF)  */}
                   {/* ======================================================== */}
@@ -7847,7 +7706,7 @@ export default function App() {
                 {/* 3. TABEL PENILAIAN CENTANG */}
                 <div
                   className="mb-5 overflow-x-auto border-2"
-                  style={{ borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor }}
+                  style={{ borderColor: '#000000' }}
                 >
                   <table className="w-full text-xs border-collapse">
                     {tableHeaderStyle === 'screenshot2' ? (
@@ -7861,9 +7720,9 @@ export default function App() {
                             rowSpan={2}
                             className="p-2 w-10 border-r text-center font-black"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.header,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             NO
@@ -7872,9 +7731,9 @@ export default function App() {
                             rowSpan={2}
                             className="p-2 w-28 border-r text-center font-black"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.header,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             ASPEK
@@ -7883,9 +7742,9 @@ export default function App() {
                             rowSpan={2}
                             className="p-2 border-r text-center font-black min-w-[200px]"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.header,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             INDIKATOR KEBERHASILAN
@@ -7894,9 +7753,9 @@ export default function App() {
                             colSpan={5}
                             className="p-1.5 text-center font-black"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).headerText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.header,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             PENILAIAN
@@ -7905,17 +7764,17 @@ export default function App() {
                         <tr
                           className="border-b-2 text-center font-black text-[10.5px]"
                           style={{
-                            backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderBg,
-                            color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderText,
-                            borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                            backgroundColor: SCHOOL_REPORT_PALETTE.gradeHeader,
+                            color: '#000000',
+                            borderColor: '#000000'
                           }}
                         >
                           <th
                             className="p-1.5 w-24 border-r text-center"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.gradeHeader,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             Exceptional
@@ -7923,9 +7782,9 @@ export default function App() {
                           <th
                             className="p-1.5 w-12 border-r text-center"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.gradeHeader,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             A
@@ -7933,9 +7792,9 @@ export default function App() {
                           <th
                             className="p-1.5 w-12 border-r text-center"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.gradeHeader,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             B
@@ -7943,9 +7802,9 @@ export default function App() {
                           <th
                             className="p-1.5 w-12 border-r text-center"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.gradeHeader,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             C
@@ -7953,9 +7812,9 @@ export default function App() {
                           <th
                             className="p-1.5 w-16 text-center"
                             style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderBg,
-                              color: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).subHeaderText,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
+                              backgroundColor: SCHOOL_REPORT_PALETTE.gradeHeader,
+                              color: '#000000',
+                              borderColor: '#000000'
                             }}
                           >
                             Defisit
@@ -7993,6 +7852,7 @@ export default function App() {
                     <tbody className="divide-y divide-black">
                       {printViewMode === 'detail' ? (
                         ASPEK_LIST.map((aspek) => {
+                          const aspectPalette = getSchoolAspectPalette(aspek.id);
                           return aspek.indikatorList.map((ind, indIdx) => {
                             const sec = (selectedStudent[aspek.id as keyof SiswaData] as Record<string, string>) || {};
                             const val = sec[ind.key] || '';
@@ -8002,7 +7862,8 @@ export default function App() {
                                 {indIdx === 0 && (
                                   <td
                                     rowSpan={aspek.indikatorList.length}
-                                    className="p-1.5 text-center font-bold border-r border-black bg-white align-middle w-10"
+                                    className="p-1.5 text-center font-bold border-r border-black align-middle w-10"
+                                    style={{ backgroundColor: aspectPalette.number }}
                                   >
                                     {aspek.no}
                                   </td>
@@ -8010,17 +7871,22 @@ export default function App() {
                                 {indIdx === 0 && (
                                   <td
                                     rowSpan={aspek.indikatorList.length}
-                                    className="p-1.5 text-center font-bold uppercase text-[11px] text-black border-r border-black bg-white align-middle w-28"
+                                    className="p-1.5 text-center font-bold uppercase text-[11px] text-black border-r border-black align-middle w-28"
+                                    style={{ backgroundColor: aspectPalette.aspect }}
                                   >
                                     {aspek.nama}
                                   </td>
                                 )}
-                                <td className="p-1.5 border-r border-black text-left text-[11px] text-black">
+                                <td
+                                  className="p-1.5 border-r border-black text-left text-[11px] text-black"
+                                  style={{ backgroundColor: aspectPalette.indicator }}
+                                >
                                   {ind.labelLengkap}
                                 </td>
                                 <td
                                   onClick={() => updateStudentIndicator(selectedStudent.no, aspek.id, ind.key, 'Exceptional')}
                                   className="p-1.5 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-24"
+                                  style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                                   title="Pilih Exceptional"
                                 >
                                   {val === 'Exceptional' && <span className="font-bold text-base leading-none text-black">✓</span>}
@@ -8028,6 +7894,7 @@ export default function App() {
                                 <td
                                   onClick={() => updateStudentIndicator(selectedStudent.no, aspek.id, ind.key, 'A')}
                                   className="p-1.5 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-12"
+                                  style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                                   title="Pilih A"
                                 >
                                   {val === 'A' && <span className="font-bold text-base leading-none text-black">✓</span>}
@@ -8035,6 +7902,7 @@ export default function App() {
                                 <td
                                   onClick={() => updateStudentIndicator(selectedStudent.no, aspek.id, ind.key, 'B')}
                                   className="p-1.5 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-12"
+                                  style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                                   title="Pilih B"
                                 >
                                   {val === 'B' && <span className="font-bold text-base leading-none text-black">✓</span>}
@@ -8042,6 +7910,7 @@ export default function App() {
                                 <td
                                   onClick={() => updateStudentIndicator(selectedStudent.no, aspek.id, ind.key, 'C')}
                                   className="p-1.5 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-12"
+                                  style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                                   title="Pilih C"
                                 >
                                   {val === 'C' && <span className="font-bold text-base leading-none text-black">✓</span>}
@@ -8049,6 +7918,7 @@ export default function App() {
                                 <td
                                   onClick={() => updateStudentIndicator(selectedStudent.no, aspek.id, ind.key, 'Defisit')}
                                   className="p-1.5 text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-16"
+                                  style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                                   title="Pilih Defisit"
                                 >
                                   {val === 'Defisit' && <span className="font-bold text-base leading-none text-black">✓</span>}
@@ -8060,38 +7930,44 @@ export default function App() {
                       ) : (
                         ASPEK_LIST.map((aspek) => {
                           const grade = getAspectGrade(selectedStudent, aspek.id);
+                          const aspectPalette = getSchoolAspectPalette(aspek.id);
                           return (
                             <tr key={aspek.id} className="bg-white hover:bg-slate-50 transition">
-                              <td className="p-2 text-center font-bold border-r border-black w-10">{aspek.no}</td>
-                              <td className="p-2 text-center font-bold uppercase text-[11px] border-r border-black w-28">{aspek.nama}</td>
-                              <td className="p-2 text-left border-r border-black">{aspek.kategori}</td>
+                              <td className="p-2 text-center font-bold border-r border-black w-10" style={{ backgroundColor: aspectPalette.number }}>{aspek.no}</td>
+                              <td className="p-2 text-center font-bold uppercase text-[11px] border-r border-black w-28" style={{ backgroundColor: aspectPalette.aspect }}>{aspek.nama}</td>
+                              <td className="p-2 text-left border-r border-black" style={{ backgroundColor: aspectPalette.indicator }}>{aspek.kategori}</td>
                               <td
                                 onClick={() => updateStudentOverallGrade(selectedStudent.no, aspek.id, 'Exceptional')}
                                 className="p-2 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-24"
+                                style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                               >
                                 {grade === 'Exceptional' && <span className="font-bold text-base leading-none text-black">✓</span>}
                               </td>
                               <td
                                 onClick={() => updateStudentOverallGrade(selectedStudent.no, aspek.id, 'A')}
                                 className="p-2 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-12"
+                                style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                               >
                                 {grade === 'A' && <span className="font-bold text-base leading-none text-black">✓</span>}
                               </td>
                               <td
                                 onClick={() => updateStudentOverallGrade(selectedStudent.no, aspek.id, 'B')}
                                 className="p-2 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-12"
+                                style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                               >
                                 {grade === 'B' && <span className="font-bold text-base leading-none text-black">✓</span>}
                               </td>
                               <td
                                 onClick={() => updateStudentOverallGrade(selectedStudent.no, aspek.id, 'C')}
                                 className="p-2 border-r border-black text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-12"
+                                style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                               >
                                 {grade === 'C' && <span className="font-bold text-base leading-none text-black">✓</span>}
                               </td>
                               <td
                                 onClick={() => updateStudentOverallGrade(selectedStudent.no, aspek.id, 'Defisit')}
                                 className="p-2 text-center font-bold cursor-pointer hover:bg-slate-100 select-none w-16"
+                                style={{ backgroundColor: SCHOOL_REPORT_PALETTE.gradeCell }}
                               >
                                 {grade === 'Defisit' && <span className="font-bold text-base leading-none text-black">✓</span>}
                               </td>
