@@ -17,6 +17,12 @@
   border: 1px solid #000 !important;
 }
 
+.report-aspect-group,
+.report-aspect-group tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 @media screen {
   :root {
     color-scheme: light;
@@ -644,5 +650,9 @@
   th, td, div, span, table {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  .report-assessment-table thead {
+    display: table-header-group;
   }
 }

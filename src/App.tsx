@@ -1869,7 +1869,7 @@ export default function App() {
     const rowsHtml = ASPEK_LIST.map((aspek) => {
       const aspectPalette = getSchoolAspectPalette(aspek.id);
       if (isDetailMode) {
-        return aspek.indikatorList
+        const aspectRows = aspek.indikatorList
           .map((ind, indIdx) => {
             const sec = (student[aspek.id as keyof SiswaData] as Record<string, string>) || {};
             const val = sec[ind.key] || '';
@@ -1882,7 +1882,7 @@ export default function App() {
               : '';
 
             return `
-              <tr style="background-color: #ffffff;">
+              <tr style="background-color: #ffffff; break-inside: avoid; page-break-inside: avoid;">
                 ${noTd}
                 ${aspekTd}
                 <td style="border: 1px solid ${tableBorderColor}; text-align: left; padding: 4px 6px; font-size: ${sizeConf.tableFont}; color: #000; background-color: ${aspectPalette.indicator};">
@@ -1897,11 +1897,13 @@ export default function App() {
             `;
           })
           .join('');
+        return `<tbody class="report-aspect-group" style="break-inside: avoid; page-break-inside: avoid;">${aspectRows}</tbody>`;
       }
 
       const grade = getAspectGrade(student, aspek.id);
       return `
-        <tr style="background-color: #ffffff;">
+        <tbody class="report-aspect-group" style="break-inside: avoid; page-break-inside: avoid;">
+        <tr style="background-color: #ffffff; break-inside: avoid; page-break-inside: avoid;">
           <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; width: 35px; background-color: ${aspectPalette.number};">${aspek.no}</td>
           <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: ${sizeConf.tableFont}; text-transform: uppercase; width: 130px; background-color: ${aspectPalette.aspect};">${aspek.nama}</td>
           <td style="border: 1px solid ${tableBorderColor}; text-align: left; padding: 5px 8px; font-size: ${sizeConf.tableFont}; background-color: ${aspectPalette.indicator};">${aspek.kategori}</td>
@@ -1911,6 +1913,7 @@ export default function App() {
           <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${grade === 'C' ? '✓' : ''}</td>
           <td style="border: 1px solid ${tableBorderColor}; text-align: center; font-weight: bold; font-size: 14px; color: #000; background-color: ${SCHOOL_REPORT_PALETTE.gradeCell};">${grade === 'Defisit' ? '✓' : ''}</td>
         </tr>
+        </tbody>
       `;
     }).join('');
 
@@ -1961,18 +1964,18 @@ export default function App() {
 
     const studentInfoHtml = infoStyle === 'simple' ? `
       <div style="margin-bottom: 12px; font-size: 11px; font-weight: bold; line-height: 1.6;">
-        <table style="border: none; width: auto; margin-bottom: 0;">
+        <table style="border: none; width: min(100%, 420px); margin-bottom: 0; border-collapse: collapse;">
           <tr>
-            <td style="border: none; padding: 1px 4px; font-weight: bold; width: 95px; font-size: 11px;">Nama Siswa</td>
-            <td style="border: none; padding: 1px 4px; font-weight: 900; text-transform: uppercase; font-size: 11.5px;">: ${student.nama}</td>
+            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; width: 95px; font-size: 11px; line-height: 1.4;">Nama Siswa</td>
+            <td style="border: none; padding: 2px 4px; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.2px; line-height: 1.4;">: ${student.nama}</td>
           </tr>
           <tr>
-            <td style="border: none; padding: 1px 4px; font-weight: bold; font-size: 11px;">NIS</td>
-            <td style="border: none; padding: 1px 4px; font-family: monospace; font-weight: bold; font-size: 11px;">: ${student.nis}</td>
+            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; font-size: 11px; line-height: 1.4;">NIS</td>
+            <td style="border: none; padding: 2px 4px; font-family: monospace; font-weight: bold; font-size: 11px; line-height: 1.4;">: ${student.nis}</td>
           </tr>
           <tr>
-            <td style="border: none; padding: 1px 4px; font-weight: bold; font-size: 11px;">Kelas</td>
-            <td style="border: none; padding: 1px 4px; font-weight: bold; font-size: 11px;">: ${student.kelas}</td>
+            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; font-size: 11px; line-height: 1.4;">Kelas</td>
+            <td style="border: none; padding: 2px 4px; font-weight: bold; font-size: 11px; line-height: 1.4;">: ${student.kelas}</td>
           </tr>
         </table>
       </div>
@@ -2054,9 +2057,7 @@ export default function App() {
       <!-- TABEL PENILAIAN CENTANG 9 ASPEK -->
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1.5px solid ${tableBorderColor};">
         ${tableHeaderHtml}
-        <tbody>
-          ${rowsHtml}
-        </tbody>
+        ${rowsHtml}
       </table>
 
       <!-- REFLEKSI PERKEMBANGAN SISWA -->
@@ -2191,6 +2192,10 @@ export default function App() {
       font-size: ${sizeConf.tableFont};
       line-height: 1.35;
     }
+    .report-aspect-group, .report-aspect-group tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
     .text-center { text-align: center; }
     .text-left { text-align: left; }
     .text-right { text-align: right; }
@@ -2198,6 +2203,9 @@ export default function App() {
     .font-black { font-weight: 900; }
     .uppercase { text-transform: uppercase; }
     @media print {
+      thead {
+        display: table-header-group;
+      }
       body {
         padding: 0;
         margin: 0;
@@ -4057,7 +4065,7 @@ export default function App() {
               </div>
 
               <div className="overflow-x-auto border-2 border-black rounded-lg">
-                <table className="report-assessment-table w-full text-xs border-collapse">
+                <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-white font-bold border-b border-black text-center">
                       <th rowSpan={3} className="border-r border-black p-2 w-10">NO</th>
@@ -7589,12 +7597,12 @@ export default function App() {
                     <table className="border-none w-auto mb-1">
                       <tbody>
                         <tr>
-                          <td className="border-none py-0.5 pr-4 font-bold w-28 text-slate-800">Nama Siswa</td>
-                          <td className="border-none py-0.5 font-black uppercase text-black">: {selectedStudent.nama}</td>
+                          <td className="border-none py-1 pr-4 font-bold w-28 text-slate-800 text-[11px]">Nama Siswa</td>
+                          <td className="border-none py-1 font-bold uppercase tracking-wide text-[13px] leading-snug text-black">: {selectedStudent.nama}</td>
                         </tr>
                         <tr>
-                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800">NIS</td>
-                          <td className="border-none py-0.5 font-mono font-bold text-black">: {selectedStudent.nis}</td>
+                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800 text-[11px]">NIS</td>
+                          <td className="border-none py-0.5 font-mono font-bold text-[11px] text-black">: {selectedStudent.nis}</td>
                         </tr>
                         <tr>
                           <td className="border-none py-0.5 pr-4 font-bold text-slate-800">Kelas</td>
@@ -7708,7 +7716,7 @@ export default function App() {
                   className="mb-5 overflow-x-auto border-2"
                   style={{ borderColor: '#000000' }}
                 >
-                  <table className="w-full text-xs border-collapse">
+                  <table className="report-assessment-table w-full text-xs border-collapse">
                     {tableHeaderStyle === 'screenshot2' ? (
                       /* HEADER FORMAT RESMI EXCEL DENGAN PERSONALISASI WARNA */
                       <thead>
@@ -7849,16 +7857,20 @@ export default function App() {
                         </tr>
                       </thead>
                     )}
-                    <tbody className="divide-y divide-black">
-                      {printViewMode === 'detail' ? (
+                    {printViewMode === 'detail' ? (
                         ASPEK_LIST.map((aspek) => {
                           const aspectPalette = getSchoolAspectPalette(aspek.id);
-                          return aspek.indikatorList.map((ind, indIdx) => {
-                            const sec = (selectedStudent[aspek.id as keyof SiswaData] as Record<string, string>) || {};
-                            const val = sec[ind.key] || '';
-
-                            return (
-                              <tr key={`${aspek.id}-${ind.key}`} className="bg-white hover:bg-slate-50 transition">
+                          return (
+                            <tbody
+                              key={aspek.id}
+                              className="report-aspect-group divide-y divide-black"
+                              style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+                            >
+                              {aspek.indikatorList.map((ind, indIdx) => {
+                                const sec = (selectedStudent[aspek.id as keyof SiswaData] as Record<string, string>) || {};
+                                const val = sec[ind.key] || '';
+                                return (
+                                  <tr key={`${aspek.id}-${ind.key}`} className="bg-white hover:bg-slate-50 transition">
                                 {indIdx === 0 && (
                                   <td
                                     rowSpan={aspek.indikatorList.length}
@@ -7923,16 +7935,23 @@ export default function App() {
                                 >
                                   {val === 'Defisit' && <span className="font-bold text-base leading-none text-black">✓</span>}
                                 </td>
-                              </tr>
-                            );
-                          });
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          );
                         })
                       ) : (
                         ASPEK_LIST.map((aspek) => {
                           const grade = getAspectGrade(selectedStudent, aspek.id);
                           const aspectPalette = getSchoolAspectPalette(aspek.id);
                           return (
-                            <tr key={aspek.id} className="bg-white hover:bg-slate-50 transition">
+                            <tbody
+                              key={aspek.id}
+                              className="report-aspect-group divide-y divide-black"
+                              style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+                            >
+                            <tr className="bg-white hover:bg-slate-50 transition">
                               <td className="p-2 text-center font-bold border-r border-black w-10" style={{ backgroundColor: aspectPalette.number }}>{aspek.no}</td>
                               <td className="p-2 text-center font-bold uppercase text-[11px] border-r border-black w-28" style={{ backgroundColor: aspectPalette.aspect }}>{aspek.nama}</td>
                               <td className="p-2 text-left border-r border-black" style={{ backgroundColor: aspectPalette.indicator }}>{aspek.kategori}</td>
@@ -7972,10 +7991,10 @@ export default function App() {
                                 {grade === 'Defisit' && <span className="font-bold text-base leading-none text-black">✓</span>}
                               </td>
                             </tr>
+                            </tbody>
                           );
                         })
                       )}
-                    </tbody>
                   </table>
                 </div>
 
