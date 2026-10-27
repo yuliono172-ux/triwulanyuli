@@ -4048,7 +4048,7 @@ export default function App() {
           {/* TAB 1: KOGNITIF (6 SUB-KOLOM DENGAN KUNING)             */}
           {/* ======================================================= */}
           {currentPage === 'kognitif' && (
-            <div className="bg-white rounded-xl shadow-lg border-2 border-slate-400 p-4 sm:p-6 space-y-4">
+            <div className="bg-white rounded-xl shadow-lg border-2 border-slate-400 p-3 sm:p-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setCurrentPage('home')} className="px-3 py-1.5 bg-[#e65c00] hover:bg-[#b34700] text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow">
@@ -5503,19 +5503,19 @@ export default function App() {
               {/* ======================================================= */}
               {/* TOMBOL BERPINDAH TAMPILAN: FORMAT RESMI VS SPIDER CHART */}
               {/* ======================================================= */}
-              <div className="print:hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-3 sm:p-4 rounded-xl border-2 border-indigo-400 shadow-md flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-teal-500 flex items-center justify-center text-xl shadow-md border border-white/30 text-white shrink-0">
+              <div className="print:hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-2.5 sm:p-3 rounded-xl border border-indigo-400 shadow-md flex flex-wrap items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-teal-500 flex items-center justify-center text-base shadow-sm border border-white/30 text-white shrink-0">
                     {reportViewMode === 'spider_chart' ? '🕸️' : '📄'}
                   </div>
                   <div>
-                    <div className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <div className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider flex flex-wrap items-center gap-1">
                       <span>PILIH FORMAT TAMPILAN RAPOR:</span>
-                      <span className="px-2 py-0.5 rounded-full bg-teal-400/20 text-teal-300 border border-teal-400/40 text-[10px] font-black">
+                      <span className="px-1.5 py-0.5 rounded-full bg-teal-400/20 text-teal-300 border border-teal-400/40 text-[9px] font-black">
                         {selectedStudent.nama} ({selectedStudent.nis})
                       </span>
                     </div>
-                    <div className="text-sm font-black text-white">
+                    <div className="text-xs sm:text-sm font-black text-white">
                       {reportViewMode === 'spider_chart'
                         ? 'Laporan Grafik Spider Chart (Radar Interaktif 9 Aspek)'
                         : 'Lembar Rapor Cetak Resmi (Format Standar Sekolah)'}
@@ -5523,29 +5523,29 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 bg-black/60 p-1.5 rounded-xl border border-white/20 shadow-inner">
+                <div className="flex flex-wrap items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/20">
                   <button
                     onClick={() => setReportViewMode('document')}
-                    className={`px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider flex items-center gap-2 transition cursor-pointer ${
+                    className={`px-2.5 py-1.5 rounded-md font-bold text-[10px] sm:text-[11px] uppercase tracking-wide flex items-center gap-1.5 transition cursor-pointer ${
                       reportViewMode === 'document'
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-lg ring-2 ring-white scale-102 font-black'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm ring-1 ring-white/70'
                         : 'text-white/80 hover:text-white hover:bg-white/10'
                     }`}
                   >
-                    <FileText className="w-4 h-4" />
+                    <FileText className="w-3.5 h-3.5" />
                     <span>📄 Lembar Resmi (Tabel)</span>
                   </button>
                   <button
                     onClick={() => setReportViewMode('spider_chart')}
-                    className={`px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider flex items-center gap-2 transition cursor-pointer ${
+                    className={`px-2.5 py-1.5 rounded-md font-bold text-[10px] sm:text-[11px] uppercase tracking-wide flex items-center gap-1.5 transition cursor-pointer ${
                       reportViewMode === 'spider_chart'
-                        ? 'bg-gradient-to-r from-teal-400 to-emerald-400 text-slate-950 shadow-lg ring-2 ring-white scale-102 font-black'
+                        ? 'bg-teal-300 text-slate-950 shadow-sm ring-1 ring-white/70'
                         : 'text-white/80 hover:text-white hover:bg-white/10'
                     }`}
                   >
-                    <Radar className="w-4 h-4 text-emerald-950" />
+                    <Radar className="w-3.5 h-3.5 text-emerald-950" />
                     <span>🕸️ Spider Chart (Radar)</span>
-                    <span className="px-1.5 py-0.5 text-[9px] bg-red-600 text-white rounded-full font-bold animate-pulse">BARU</span>
+                    <span className="px-1 py-0.5 text-[8px] bg-red-600 text-white rounded-full font-bold">BARU</span>
                   </button>
                 </div>
               </div>
@@ -5555,8 +5555,8 @@ export default function App() {
               {/* ======================================================= */}
               {reportViewMode === 'spider_chart' ? (
                 /* BAR KONTROL SPIDER CHART */
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 print:hidden bg-slate-50 -mx-4 sm:-mx-6 p-4 rounded-xl border-slate-300">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 print:hidden bg-slate-50 -mx-3 sm:-mx-4 p-3 rounded-xl border-slate-300">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       onClick={() => setCurrentPage('home')}
                       className="px-3 py-1.5 bg-[#e65c00] hover:bg-[#b34700] text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow transition cursor-pointer"
@@ -5615,8 +5615,8 @@ export default function App() {
                     )}
 
                     {/* PILIHAN MENU TRIWULAN (TRIWULAN 1 / TRIWULAN 2 / TRIWULAN 3 / TRIWULAN 4) */}
-                    <div className="flex items-center gap-1 bg-white p-1 rounded-xl border-2 border-slate-400 shadow-xs ml-1 sm:ml-2">
-                      <span className="text-[11px] font-black text-slate-700 uppercase px-1.5 hidden md:inline">
+                    <div className="flex items-center gap-0.5 bg-white p-0.5 rounded-lg border border-slate-300 ml-1 sm:ml-2">
+                      <span className="text-[10px] font-bold text-slate-700 uppercase px-1 hidden md:inline">
                         Periode:
                       </span>
                       {TRIWULAN_OPTIONS.map((t) => {
@@ -5630,9 +5630,9 @@ export default function App() {
                               setPrintStatus(`Spider Chart menampilkan data ${t.label}.`);
                               setTimeout(() => setPrintStatus(null), 3000);
                             }}
-                            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition border cursor-pointer ${
+                            className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-normal transition border cursor-pointer ${
                               isSelected
-                                ? 'bg-amber-500 text-black border-amber-600 shadow-md ring-2 ring-amber-300 scale-105'
+                                ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-sm'
                                 : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 hover:text-black'
                             }`}
                             title={`Tampilkan data Spider Chart untuk ${t.label}`}
@@ -5646,8 +5646,8 @@ export default function App() {
                 </div>
               ) : (
                 /* BAR KONTROL LEMBAR RESMI (DOKUMEN TABEL) */
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 print:hidden bg-slate-50 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 p-4 rounded-t-xl border-slate-300">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 print:hidden bg-slate-50 -mx-3 sm:-mx-4 -mt-3 sm:-mt-4 p-3 rounded-t-xl border-slate-300">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       onClick={() => setCurrentPage('home')}
                       className="px-3 py-1.5 bg-[#e65c00] hover:bg-[#b34700] text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow transition"
@@ -5710,8 +5710,8 @@ export default function App() {
                     )}
 
                     {/* PILIHAN MENU TRIWULAN (TRIWULAN 1 / TRIWULAN 2 / TRIWULAN 3 / TRIWULAN 4) */}
-                    <div className="flex items-center gap-1 bg-white p-1 rounded-xl border-2 border-slate-400 shadow-xs ml-1 sm:ml-2">
-                      <span className="text-[11px] font-black text-slate-700 uppercase px-1.5 hidden md:inline">
+                    <div className="flex items-center gap-0.5 bg-white p-0.5 rounded-lg border border-slate-300 ml-1 sm:ml-2">
+                      <span className="text-[10px] font-bold text-slate-700 uppercase px-1 hidden md:inline">
                         Periode:
                       </span>
                       {TRIWULAN_OPTIONS.map((t) => {
@@ -5725,9 +5725,9 @@ export default function App() {
                               setPrintStatus(`Lembar Rapor menampilkan data ${t.label}.`);
                               setTimeout(() => setPrintStatus(null), 3000);
                             }}
-                            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition border cursor-pointer ${
+                            className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-normal transition border cursor-pointer ${
                               isSelected
-                                ? 'bg-amber-500 text-black border-amber-600 shadow-md ring-2 ring-amber-300 scale-105'
+                                ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-sm'
                                 : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 hover:text-black'
                             }`}
                             title={`Tampilkan data Rapor untuk ${t.label}`}
@@ -5743,19 +5743,19 @@ export default function App() {
                     {/* Tombol Cetak Utama */}
                     <button
                       onClick={handlePrintRapor}
-                      className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer"
+                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
                       title="Buka dialog cetak printer / Simpan ke PDF"
                     >
-                      <Printer className="w-4 h-4" /> Cetak Rapor
+                      <Printer className="w-3.5 h-3.5" /> Cetak Rapor
                     </button>
 
                     {/* Tombol Unduh File HTML Siap Cetak */}
                     <button
                       onClick={handleDownloadRaporHTML}
-                      className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer"
+                      className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
                       title="Unduh file rapor mandiri. Bisa dibuka dan dicetak langsung dari browser manapun"
                     >
-                      <Download className="w-4 h-4" /> Unduh Dokumen
+                      <Download className="w-3.5 h-3.5" /> Unduh Dokumen
                     </button>
                   </div>
                 </div>
