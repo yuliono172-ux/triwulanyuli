@@ -37,6 +37,7 @@ import {
   Users,
   Shield,
   Save,
+  Trash2,
   Cloud,
   CloudOff
 } from 'lucide-react';
@@ -1056,6 +1057,7 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentNum, setSelectedStudentNum] = useState<number>(1);
+  const [selectedStudentNos, setSelectedStudentNos] = useState<number[]>([]);
   const [printViewMode, setPrintViewMode] = useState<'ringkas' | 'detail'>('detail');
 
   // Sinkronisasi: Jika berada di halaman aspek, otomatis buka Triwulan yang aktif di accordion
@@ -1308,14 +1310,16 @@ export default function App() {
         setFirebaseConnected(true);
         if (snapshot.exists()) {
           const val = snapshot.val();
-          if (Array.isArray(val) && val.length > 0) {
+          if (Array.isArray(val)) {
             setMasterStudents(val);
           } else if (typeof val === 'object' && val !== null) {
-            const arr = Object.values(val) as StudentRecord[];
-            if (arr.length > 0) {
-              arr.sort((a, b) => a.no - b.no);
-              setMasterStudents(arr);
+            if (val.__emptyDatabase === true) {
+              setMasterStudents([]);
+              return;
             }
+            const arr = Object.values(val) as StudentRecord[];
+            arr.sort((a, b) => a.no - b.no);
+            setMasterStudents(arr);
           }
         } else {
           // Inisialisasi awal ke Firebase jika masih kosong
@@ -1462,17 +1466,46 @@ export default function App() {
     setIsFirebaseSyncing(true);
     try {
       const studentsRef = ref(db, 'students');
-      await set(studentsRef, newStudents);
+      await set(studentsRef, newStudents.length > 0 ? newStudents : { __emptyDatabase: true });
       setMasterStudents(newStudents);
       toastSuccess(
         'Data Siswa Berhasil Disimpan',
         customMsg || 'Data penilaian siswa berhasil diperbarui ke Firebase Realtime Database.'
       );
+      return true;
     } catch (err: any) {
       console.error('Gagal menyimpan siswa ke Firebase:', err);
       toastError('Gagal Menyimpan Data Siswa', err?.message || 'Terjadi kesalahan jaringan Firebase.');
+      return false;
     } finally {
       setIsFirebaseSyncing(false);
+    }
+  };
+
+  const handleDeleteStudents = async (studentNos: number[], deleteAll = false) => {
+    const studentsToDelete = masterStudents.filter((student) => studentNos.includes(student.no));
+    if (studentsToDelete.length === 0 || isFirebaseSyncing) return;
+
+    const confirmation = deleteAll
+      ? `Hapus SELURUH ${studentsToDelete.length} data siswa beserta seluruh nilai dan rapornya? Tindakan ini tidak dapat dibatalkan.`
+      : `Hapus ${studentsToDelete.length} data siswa terpilih beserta seluruh nilai dan rapornya? Tindakan ini tidak dapat dibatalkan.`;
+    if (!window.confirm(confirmation)) return;
+
+    const deletedNos = new Set(studentsToDelete.map((student) => student.no));
+    const remainingStudents = masterStudents
+      .filter((student) => !deletedNos.has(student.no))
+      .map((student, index) => ({ ...student, no: index + 1 }));
+    const saved = await saveStudentsToFirebase(
+      remainingStudents,
+      deleteAll
+        ? 'Seluruh database siswa dan data penilaiannya berhasil dihapus.'
+        : `${studentsToDelete.length} siswa beserta data penilaiannya berhasil dihapus.`
+    );
+
+    if (saved) {
+      setSelectedStudentNos([]);
+      setSelectedStudentNum(remainingStudents[0]?.no ?? 1);
+      setCurrentPage('database');
     }
   };
 
@@ -4744,6 +4777,23 @@ export default function App() {
                       <Save className="w-3.5 h-3.5" />
                       <span>{isFirebaseSyncing ? 'Menyimpan...' : 'Simpan Data Siswa ke RTDB'}</span>
                     </button>
+                    <button
+                      onClick={() => handleDeleteStudents(selectedStudentNos)}
+                      disabled={selectedStudentNos.length === 0 || isFirebaseSyncing}
+                      className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Hapus siswa yang dicentang beserta seluruh nilai dan rapornya"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Hapus Terpilih ({selectedStudentNos.length})
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStudents(masterStudents.map((student) => student.no), true)}
+                      disabled={masterStudents.length === 0 || isFirebaseSyncing}
+                      className="px-3 py-1.5 bg-red-950 hover:bg-red-900 text-white rounded-lg text-xs font-bold flex items-center gap-1 border border-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Hapus seluruh siswa beserta semua nilai dan rapornya"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus Semua
+                    </button>
                   </div>
                 )}
                 {currentUser?.role === 'orangtua' && (
@@ -4760,7 +4810,19 @@ export default function App() {
                   <table className="w-full text-xs text-left border-collapse">
                     <thead className="bg-[#d9d9d9] font-black border-b-2 border-black text-center uppercase tracking-wide">
                       <tr>
-                        <th className="p-2.5 w-12 border-r border-black">NO</th>
+                        <th className="p-2.5 w-16 border-r border-black">
+                          <label className="flex items-center justify-center gap-1.5">
+                            <input
+                              type="checkbox"
+                              aria-label="Pilih semua siswa"
+                              checked={masterStudents.length > 0 && selectedStudentNos.length === masterStudents.length}
+                              onChange={(event) => setSelectedStudentNos(
+                                event.target.checked ? masterStudents.map((student) => student.no) : []
+                              )}
+                            />
+                            <span>NO</span>
+                          </label>
+                        </th>
                         <th className="p-2.5 border-r border-black text-center min-w-[200px]">NAMA</th>
                         <th className="p-2.5 w-32 border-r border-black text-center">NIS</th>
                         <th className="p-2.5 w-32 border-r border-black text-center">KELAS</th>
@@ -4772,7 +4834,19 @@ export default function App() {
                         <tr key={s.no} className="hover:bg-amber-50/60 transition">
                           {/* NO */}
                           <td className="p-2 text-center font-bold border-r border-black bg-white">
-                            {s.no}
+                            <label className="flex items-center justify-center gap-1.5">
+                              <input
+                                type="checkbox"
+                                aria-label={`Pilih ${s.nama}`}
+                                checked={selectedStudentNos.includes(s.no)}
+                                onChange={(event) => setSelectedStudentNos((previous) => (
+                                  event.target.checked
+                                    ? [...previous, s.no]
+                                    : previous.filter((no) => no !== s.no)
+                                ))}
+                              />
+                              {s.no}
+                            </label>
                           </td>
 
                           {/* NAMA (EDITABLE) */}
@@ -4839,15 +4913,8 @@ export default function App() {
                           <td className="p-1 text-center">
                             {currentUser?.role !== 'orangtua' ? (
                               <button
-                                onClick={() => {
-                                  if (masterStudents.length > 1) {
-                                    const filtered = masterStudents
-                                      .filter((item) => item.no !== s.no)
-                                      .map((item, idx) => ({ ...item, no: idx + 1 }));
-                                    setMasterStudents(filtered);
-                                    saveStudentsToFirebase(filtered, `Siswa "${s.nama}" berhasil dihapus dari Firebase.`);
-                                  }
-                                }}
+                                onClick={() => handleDeleteStudents([s.no])}
+                                disabled={isFirebaseSyncing}
                                 className="px-2 py-0.5 text-[11px] text-red-600 hover:bg-red-50 rounded cursor-pointer"
                                 title="Hapus Siswa ini"
                               >
@@ -4859,6 +4926,13 @@ export default function App() {
                           </td>
                         </tr>
                       ))}
+                      {dataSiswa.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-sm font-semibold text-slate-500">
+                            Database siswa kosong. Tambahkan siswa baru atau impor dari Excel.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
