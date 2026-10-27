@@ -155,15 +155,15 @@
   }
 
   .app-sidebar {
-    width: 248px;
-    min-width: 248px;
+    width: 224px;
+    min-width: 224px;
     border: 0;
     background: #101d35;
     box-shadow: 5px 0 22px rgb(17 34 68 / 8%);
   }
 
   .app-sidebar > div:first-child {
-    min-height: 72px;
+    min-height: 56px;
     border-color: rgb(255 255 255 / 8%);
     background: #101d35;
   }

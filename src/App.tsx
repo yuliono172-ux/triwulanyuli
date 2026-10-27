@@ -3004,21 +3004,21 @@ export default function App() {
           {/* PERMANENT LEFT-HAND SIDEBAR (COLLAPSIBLE ACCORDION)       */}
           {/* ======================================================= */}
           <aside
-            className={`app-sidebar print:hidden w-full md:w-64 lg:w-72 bg-gradient-to-b from-[#1e2530] via-[#171d26] to-[#0f1319] text-white border-r-4 border-slate-600 shadow-2xl flex flex-col shrink-0 select-none ${
+            className={`app-sidebar print:hidden w-full md:w-56 lg:w-60 bg-gradient-to-b from-[#1e2530] via-[#171d26] to-[#0f1319] text-white border-r-4 border-slate-600 shadow-2xl flex flex-col shrink-0 select-none ${
               isMobileSidebarOpen ? 'block' : 'hidden md:flex'
             }`}
           >
             {/* Header Sidebar */}
-            <div className="p-3 border-b-2 border-slate-700 bg-slate-900/90 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-black text-black shadow-md border border-white/20 text-xs">
+            <div className="p-2 border-b border-slate-700 bg-slate-900/90 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-black text-black shadow-sm border border-white/20 text-[11px]">
                   SD
                 </div>
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                  <h3 className="text-[11px] font-black uppercase tracking-wide text-white">
                     MENU NAVIGASI
                   </h3>
-                  <p className="text-[10px] text-amber-300 font-medium">
+                  <p className="text-[9px] text-amber-300 font-medium">
                     Rapor Siswa Terpadu
                   </p>
                 </div>
@@ -3033,25 +3033,25 @@ export default function App() {
             </div>
 
             {/* Status Context Triwulan Aktif di Sidebar */}
-            <div className="px-3 py-1.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400 font-semibold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="px-2 py-1 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Konteks Data:
               </span>
-              <span className="font-black text-amber-400 bg-amber-950/90 px-2 py-0.5 rounded border border-amber-600/70 uppercase tracking-wide">
+              <span className="font-black text-amber-400 bg-amber-950/90 px-1.5 py-0.5 rounded border border-amber-600/70 uppercase tracking-wide text-[9px]">
                 {activeTriwulan} ({TRIWULAN_OPTIONS.find((t) => t.id === activeTriwulan)?.label})
               </span>
             </div>
 
             {/* List Navigasi Utama */}
-            <div className="p-2.5 space-y-1.5 flex-1 overflow-y-auto max-h-[calc(100vh-210px)] scrollbar-thin">
+            <div className="p-2 space-y-1 flex-1 overflow-y-auto max-h-[calc(100vh-190px)] scrollbar-thin">
               {/* 1. HOME */}
               <button
                 onClick={() => {
                   setCurrentPage('home');
                   setIsMobileSidebarOpen(false);
                 }}
-                className={`w-full py-2 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2.5 transition border-2 cursor-pointer ${
+                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center gap-2 transition border cursor-pointer ${
                   currentPage === 'home'
                     ? 'bg-gradient-to-r from-[#00a2ed] to-[#0077b6] text-white border-white shadow-[0_2px_8px_rgba(0,162,237,0.5)] ring-2 ring-sky-300'
                     : 'bg-gradient-to-b from-[#ff8c00] via-[#e65c00] to-[#b34700] text-white border-[#5a2400] hover:brightness-110 shadow-xs'
@@ -3067,7 +3067,7 @@ export default function App() {
                   setCurrentPage('database');
                   setIsMobileSidebarOpen(false);
                 }}
-                className={`w-full py-2 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2.5 transition border-2 cursor-pointer ${
+                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center gap-2 transition border cursor-pointer ${
                   currentPage === 'database'
                     ? 'bg-gradient-to-r from-[#00a2ed] to-[#0077b6] text-white border-white shadow-[0_2px_8px_rgba(0,162,237,0.5)] ring-2 ring-sky-300'
                     : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-700/90 hover:text-white shadow-xs'
@@ -3083,7 +3083,7 @@ export default function App() {
                   setCurrentPage('dbtw');
                   setIsMobileSidebarOpen(false);
                 }}
-                className={`w-full py-2 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2.5 transition border-2 cursor-pointer ${
+                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center gap-2 transition border cursor-pointer ${
                   currentPage === 'dbtw'
                     ? 'bg-gradient-to-r from-[#00a2ed] to-[#0077b6] text-white border-white shadow-[0_2px_8px_rgba(0,162,237,0.5)] ring-2 ring-sky-300'
                     : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-700/90 hover:text-white shadow-xs'
@@ -3094,8 +3094,8 @@ export default function App() {
               </button>
 
               {/* Section Header: Periode Penilaian Accordion */}
-              <div className="pt-2 pb-0.5">
-                <div className="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center justify-between border-b border-slate-700/80">
+              <div className="pt-1.5 pb-0.5">
+                <div className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center justify-between border-b border-slate-700/80">
                   <span>PERIODE TRIWULAN</span>
                   <span className="text-[9px] text-amber-400 font-bold">4 PERIODE</span>
                 </div>
@@ -3118,7 +3118,7 @@ export default function App() {
                     {/* Header Triwulan Accordion */}
                     <button
                       onClick={() => handleToggleTriwulanAccordion(t.id)}
-                      className={`w-full py-2 px-2.5 flex items-center justify-between text-xs font-black uppercase tracking-wider transition cursor-pointer group ${
+                      className={`w-full py-1.5 px-2 flex items-center justify-between text-[11px] font-black uppercase tracking-wide transition cursor-pointer group ${
                         isTriwulanActive
                           ? isExpanded
                             ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black'
@@ -3165,8 +3165,8 @@ export default function App() {
 
                     {/* Submenu 9 Aspek (Single-Open Accordion Body) */}
                     {isExpanded && (
-                      <div className="p-1.5 bg-slate-950/80 border-t border-slate-800 space-y-1">
-                        <div className="text-[10px] text-slate-400 font-semibold px-2 py-0.5 flex items-center justify-between italic">
+                      <div className="p-1 bg-slate-950/80 border-t border-slate-800 space-y-1">
+                        <div className="text-[9px] text-slate-400 font-semibold px-1.5 py-0.5 flex items-center justify-between italic">
                           <span>9 Aspek Penilaian:</span>
                           <span className="text-amber-300 text-[9px] font-bold">Konteks {t.id}</span>
                         </div>
@@ -3179,7 +3179,7 @@ export default function App() {
                             <button
                               key={`sub-${t.id}-${aspek.id}`}
                               onClick={() => handleSelectAspectSubmenu(t.id, aspek.id)}
-                              className={`w-full text-left py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-between group cursor-pointer border ${
+                              className={`w-full text-left py-1 px-1.5 rounded-md text-[11px] font-bold transition flex items-center justify-between group cursor-pointer border ${
                                 isSubActive
                                   ? 'bg-[#00a2ed] text-white border-white shadow-md ring-2 ring-sky-300 scale-[1.01]'
                                   : 'bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white border-transparent hover:border-slate-700'
@@ -3215,8 +3215,8 @@ export default function App() {
               })}
 
               {/* Section Header: Laporan & Analisis */}
-              <div className="pt-2 pb-0.5">
-                <div className="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-700/80">
+              <div className="pt-1.5 pb-0.5">
+                <div className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-700/80">
                   ANALISIS & RAPOR RESMI
                 </div>
               </div>
@@ -3227,7 +3227,7 @@ export default function App() {
                   setCurrentPage('perbandingan');
                   setIsMobileSidebarOpen(false);
                 }}
-                className={`w-full py-2 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-between transition border-2 cursor-pointer ${
+                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center justify-between transition border cursor-pointer ${
                   currentPage === 'perbandingan'
                     ? 'bg-gradient-to-r from-[#00a2ed] to-[#0077b6] text-white border-white shadow-[0_2px_8px_rgba(0,162,237,0.5)] ring-2 ring-sky-300'
                     : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-700/90 hover:text-white shadow-xs'
@@ -3249,7 +3249,7 @@ export default function App() {
                   setReportViewMode('spider_chart');
                   setIsMobileSidebarOpen(false);
                 }}
-                className={`w-full py-2 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-between transition border-2 cursor-pointer ${
+                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center justify-between transition border cursor-pointer ${
                   currentPage === 'to_print_page' && reportViewMode === 'spider_chart'
                     ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white border-white shadow-[0_2px_8px_rgba(20,184,166,0.5)] ring-2 ring-teal-300'
                     : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-700/90 hover:text-white shadow-xs'
@@ -3271,7 +3271,7 @@ export default function App() {
                   setReportViewMode('document');
                   setIsMobileSidebarOpen(false);
                 }}
-                className={`w-full py-2 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-between transition border-2 cursor-pointer ${
+                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center justify-between transition border cursor-pointer ${
                   currentPage === 'to_print_page' && reportViewMode === 'document'
                     ? 'bg-gradient-to-r from-[#00a2ed] to-[#0077b6] text-white border-white shadow-[0_2px_8px_rgba(0,162,237,0.5)] ring-2 ring-sky-300'
                     : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-700/90 hover:text-white shadow-xs'
@@ -3293,7 +3293,7 @@ export default function App() {
                     setCurrentPage('guru_manage');
                     setIsMobileSidebarOpen(false);
                   }}
-                  className={`w-full py-2 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-between transition border-2 cursor-pointer ${
+                  className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center justify-between transition border cursor-pointer ${
                     currentPage === 'guru_manage'
                       ? 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white border-white shadow-[0_2px_8px_rgba(147,51,234,0.5)] ring-2 ring-purple-300'
                       : 'bg-purple-950/70 text-purple-200 border-purple-700/70 hover:bg-purple-900/80 hover:text-white shadow-xs'
@@ -3311,7 +3311,7 @@ export default function App() {
             </div>
 
             {/* Sidebar Footer Info */}
-            <div className="p-3 bg-slate-950/90 border-t-2 border-slate-800 text-[11px] text-slate-400 space-y-1">
+            <div className="p-2 bg-slate-950/90 border-t border-slate-800 text-[10px] text-slate-400 space-y-1">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-slate-500">Kelas:</span>
                 <span className="text-white font-bold">IV (Empat)</span>
