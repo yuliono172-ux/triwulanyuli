@@ -5846,6 +5846,22 @@ export default function App() {
               {/* ======================================================== */}
               {/* 1. DIALOG PENGATURAN CETAK RAPOR & PRINTER (MODAL LENGKAP) */}
               {/* ======================================================== */}
+              {masterStudents.length === 0 && currentPage !== 'database' ? (
+                <div className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+                  <Database className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+                  <h2 className="text-lg font-bold text-slate-800">Database siswa kosong</h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Tambahkan siswa atau impor data melalui halaman database sebelum membuka rapor dan penilaian.
+                  </p>
+                  <button
+                    onClick={() => setCurrentPage('database')}
+                    className="mt-4 rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800"
+                  >
+                    Buka Database Siswa
+                  </button>
+                </div>
+              ) : (
+                <>
               {showPrintModal && (
                 <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs print:hidden overflow-y-auto">
                   <div className="bg-white rounded-2xl shadow-2xl border-4 border-emerald-600 max-w-xl w-full my-6 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -8169,6 +8185,8 @@ export default function App() {
               </React.Fragment>
               )}
             </div>
+          )}
+            </>
           )}
           </main>
         </div>
