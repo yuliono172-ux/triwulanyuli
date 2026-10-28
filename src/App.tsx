@@ -489,31 +489,70 @@ const getAspectGrade = (siswa: SiswaData, aspectId: string): string => {
   return 'Defisit';
 };
 
+const formatStudentName = (name: string) =>
+  name
+    .trim()
+    .toLocaleLowerCase('id-ID')
+    .replace(/(^|[\s'-])\p{L}/gu, (letter) => letter.toLocaleUpperCase('id-ID'));
+
+const generateAspectDescription = (
+  studentName: string,
+  aspectId: string,
+  section: Record<string, string>
+): string => {
+  const aspect = ASPEK_LIST.find((item) => item.id === aspectId);
+  if (!aspect) return '';
+
+  const ratedIndicators = aspect.indikatorList
+    .map((indicator) => ({ ...indicator, grade: section[indicator.key] }))
+    .filter((indicator) => PILIHAN_PREDIKAT.includes(indicator.grade));
+  if (ratedIndicators.length === 0) return '';
+
+  const name = formatStudentName(studentName);
+  const clauses: string[] = [];
+  const strong = ratedIndicators.filter(({ grade }) => grade === 'Exceptional' || grade === 'A');
+  const developing = ratedIndicators.filter(({ grade }) => grade === 'B');
+  const support = ratedIndicators.filter(({ grade }) => grade === 'C' || grade === 'Defisit');
+  const describeIndicators = (indicators: typeof ratedIndicators) =>
+    indicators.map(({ nama, grade }) => `${nama} (${grade})`).join(', ');
+
+  if (strong.length > 0) {
+    clauses.push(`menunjukkan capaian yang baik pada ${describeIndicators(strong)}`);
+  }
+  if (developing.length > 0) {
+    clauses.push(`terus mengembangkan kemampuan pada ${describeIndicators(developing)}`);
+  }
+  if (support.length > 0) {
+    clauses.push(`masih memerlukan latihan dan pendampingan bertahap pada ${describeIndicators(support)}`);
+  }
+
+  return `Pada aspek ${aspect.nama}, Ananda ${name} ${clauses.join('; ')}.`;
+};
+
+const getAspectDescriptions = (siswa: SiswaData): string[] =>
+  ASPEK_LIST.map((aspect) => {
+    const section = (siswa[aspect.id as keyof SiswaData] as Record<string, string> | undefined) || {};
+    return section.deskripsi?.trim() || generateAspectDescription(siswa.nama, aspect.id, section);
+  }).filter(Boolean);
+
 const generateDefaultDeskripsi = (siswa: SiswaData): string => {
-  const exceptionalOrA: string[] = [];
-  const bList: string[] = [];
-  const defisitOrC: string[] = [];
+  const aspectDescriptions = getAspectDescriptions(siswa);
+  const introduction = `Pada periode penilaian ini, Ananda ${formatStudentName(siswa.nama)} menunjukkan perkembangan berdasarkan indikator yang telah dinilai.`;
 
-  ASPEK_LIST.forEach((asp) => {
-    const grade = getAspectGrade(siswa, asp.id);
-    if (grade === 'Exceptional' || grade === 'A') exceptionalOrA.push(asp.nama);
-    else if (grade === 'B') bList.push(asp.nama);
-    else if (grade === 'Defisit' || grade === 'C') defisitOrC.push(asp.nama);
-  });
+  return aspectDescriptions.length > 0
+    ? `${introduction}\n\n${aspectDescriptions.join('\n\n')}`
+    : `${introduction}\n\nBelum ada nilai indikator yang dapat digunakan untuk menyusun deskripsi aspek.`;
+};
 
-  let narasi = `Pada Triwulan ini, perkembangan Ananda ${siswa.nama} terpantau secara menyeluruh pada 9 dimensi perkembangan peserta didik.\n\n`;
+const getReportDescription = (siswa: SiswaData): string => {
+  const savedDescription = siswa.deskripsiRapor?.trim();
+  const aspectDescriptions = getAspectDescriptions(siswa);
+  if (!savedDescription) return generateDefaultDeskripsi(siswa);
 
-  if (exceptionalOrA.length > 0) {
-    narasi += `✓ Aspek Keunggulan: Ananda menunjukkan capaian yang sangat baik dan konsisten pada aspek ${exceptionalOrA.join(', ')}. Kemampuan ini mencerminkan kemandirian dan antusiasme belajar yang patut diapresiasi.\n\n`;
-  }
-  if (bList.length > 0) {
-    narasi += `✓ Aspek Berkembang: Pada aspek ${bList.join(', ')}, ananda menunjukkan perkembangan yang selaras dengan harapan tahapan usianya.\n\n`;
-  }
-  if (defisitOrC.length > 0) {
-    narasi += `✓ Aspek Pendampingan: Adapun pada aspek ${defisitOrC.join(', ')}, ananda masih memerlukan pendampingan berkelanjutan, bimbingan intensif, serta pembiasaan rutin agar potensinya dapat berkembang secara lebih optimal.`;
-  }
-
-  return narasi;
+  const missingAspectDescriptions = aspectDescriptions.filter((description) => !savedDescription.includes(description));
+  return missingAspectDescriptions.length > 0
+    ? `${savedDescription}\n\nRincian capaian per aspek:\n\n${missingAspectDescriptions.join('\n\n')}`
+    : savedDescription;
 };
 
 const generateDefaultSaran = (siswa: SiswaData): string => {
@@ -1854,16 +1893,21 @@ export default function App() {
       if (s.no !== no) return s;
       const curQ = s.triwulan[activeTriwulan];
       const curSec = (curQ[section] as Record<string, string>) || {};
+      const nextSec = { ...curSec, [field]: value };
+      const aspect = ASPEK_LIST.find((item) => item.id === section);
+      if (aspect?.indikatorList.some((indicator) => indicator.key === field)) {
+        const previousGeneratedDescription = generateAspectDescription(s.nama, aspect.id, curSec);
+        if (!curSec.deskripsi?.trim() || curSec.deskripsi === previousGeneratedDescription) {
+          nextSec.deskripsi = generateAspectDescription(s.nama, aspect.id, nextSec);
+        }
+      }
       return {
         ...s,
         triwulan: {
           ...s.triwulan,
           [activeTriwulan]: {
             ...curQ,
-            [section]: {
-              ...curSec,
-              [field]: value
-            }
+            [section]: nextSec
           }
         }
       };
@@ -1872,6 +1916,41 @@ export default function App() {
     saveStudentsToFirebase(
       updated,
       `Penilaian ${section} (${field}) untuk ${targetStudent?.nama || 'siswa'} tersimpan ke Firebase.`
+    );
+  };
+
+  const renderAspectDescriptionEditor = (siswa: SiswaData, aspectId: string) => {
+    const section = (siswa[aspectId as keyof SiswaData] as Record<string, string> | undefined) || {};
+    const isReadOnly = currentUser?.role === 'orangtua';
+
+    return (
+      <div className="space-y-1">
+        <button
+          type="button"
+          disabled={isReadOnly}
+          onClick={() => {
+            const description = generateAspectDescription(siswa.nama, aspectId, section);
+            if (!description) {
+              toastInfo('Nilai belum tersedia', 'Isi predikat indikator pada aspek ini terlebih dahulu.');
+              return;
+            }
+            updateStudentField(siswa.no, aspectId as keyof SiswaAssessmentRecord, 'deskripsi', description);
+            toastSuccess('Deskripsi dibuat', 'Deskripsi disusun secara lokal dari nilai indikator.');
+          }}
+          title="Disusun secara lokal dari nilai indikator; data tidak dikirim ke layanan AI."
+          className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Buat otomatis
+        </button>
+        <textarea
+          rows={2}
+          value={section.deskripsi || ''}
+          readOnly={isReadOnly}
+          onChange={(event) => updateStudentField(siswa.no, aspectId as keyof SiswaAssessmentRecord, 'deskripsi', event.target.value)}
+          className="w-full text-[11px] p-1 border rounded focus:outline-none"
+          placeholder="Deskripsi aspek..."
+        />
+      </div>
     );
   };
 
@@ -1947,7 +2026,7 @@ export default function App() {
       colorMode?: 'color' | 'grayscale';
     }
   ) => {
-    const studentDeskripsi = student.deskripsiRapor ?? generateDefaultDeskripsi(student);
+    const studentDeskripsi = getReportDescription(student);
     const studentSaran = student.saranRapor ?? generateDefaultSaran(student);
 
     const chosenThemeKey = options?.themeColor || tableThemeColor;
@@ -4338,13 +4417,7 @@ export default function App() {
                           </td>
                         ))}
                         <td className="p-1">
-                          <textarea
-                            rows={2}
-                            value={siswa.kognitif.deskripsi}
-                            onChange={(e) => updateStudentField(siswa.no, 'kognitif', 'deskripsi', e.target.value)}
-                            className="w-full text-[11px] p-1 border rounded focus:outline-none"
-                            placeholder="Deskripsi kognitif..."
-                          />
+                          {renderAspectDescriptionEditor(siswa, 'kognitif')}
                         </td>
                       </tr>
                     ))}
@@ -4416,13 +4489,7 @@ export default function App() {
                           </td>
                         ))}
                         <td className="p-1">
-                          <textarea
-                            rows={2}
-                            value={siswa.afektif.deskripsi}
-                            onChange={(e) => updateStudentField(siswa.no, 'afektif', 'deskripsi', e.target.value)}
-                            className="w-full text-[11px] p-1 border rounded focus:outline-none"
-                            placeholder="Deskripsi afektif..."
-                          />
+                          {renderAspectDescriptionEditor(siswa, 'afektif')}
                         </td>
                       </tr>
                     ))}
@@ -4495,7 +4562,7 @@ export default function App() {
                           </select>
                         </td>
                         <td className="p-1">
-                          <textarea rows={2} value={siswa.psikomotor.deskripsi} onChange={(e) => updateStudentField(siswa.no, 'psikomotor', 'deskripsi', e.target.value)} className="w-full text-[11px] p-1 border rounded focus:outline-none" placeholder="Deskripsi psikomotor..." />
+                          {renderAspectDescriptionEditor(siswa, 'psikomotor')}
                         </td>
                       </tr>
                     ))}
@@ -4555,7 +4622,7 @@ export default function App() {
                           </td>
                         ))}
                         <td className="p-1">
-                          <textarea rows={2} value={siswa.sosial.deskripsi} onChange={(e) => updateStudentField(siswa.no, 'sosial', 'deskripsi', e.target.value)} className="w-full text-[11px] p-1 border rounded focus:outline-none" placeholder="Deskripsi sosial..." />
+                          {renderAspectDescriptionEditor(siswa, 'sosial')}
                         </td>
                       </tr>
                     ))}
@@ -4621,7 +4688,7 @@ export default function App() {
                           </select>
                         </td>
                         <td className="p-1">
-                          <textarea rows={2} value={siswa.islamicLiteracy.deskripsi} onChange={(e) => updateStudentField(siswa.no, 'islamicLiteracy', 'deskripsi', e.target.value)} className="w-full text-[11px] p-1 border rounded focus:outline-none" placeholder="Deskripsi..." />
+                          {renderAspectDescriptionEditor(siswa, 'islamicLiteracy')}
                         </td>
                       </tr>
                     ))}
@@ -4680,7 +4747,7 @@ export default function App() {
                           </select>
                         </td>
                         <td className="p-1">
-                          <textarea rows={2} value={siswa.bilingual.deskripsi} onChange={(e) => updateStudentField(siswa.no, 'bilingual', 'deskripsi', e.target.value)} className="w-full text-[11px] p-1 border rounded focus:outline-none" placeholder="Deskripsi..." />
+                          {renderAspectDescriptionEditor(siswa, 'bilingual')}
                         </td>
                       </tr>
                     ))}
@@ -4739,7 +4806,7 @@ export default function App() {
                           </select>
                         </td>
                         <td className="p-1">
-                          <textarea rows={2} value={siswa.talents.deskripsi} onChange={(e) => updateStudentField(siswa.no, 'talents', 'deskripsi', e.target.value)} className="w-full text-[11px] p-1 border rounded focus:outline-none" placeholder="Deskripsi..." />
+                          {renderAspectDescriptionEditor(siswa, 'talents')}
                         </td>
                       </tr>
                     ))}
@@ -4805,7 +4872,7 @@ export default function App() {
                           </select>
                         </td>
                         <td className="p-1">
-                          <textarea rows={2} value={siswa.experience.deskripsi} onChange={(e) => updateStudentField(siswa.no, 'experience', 'deskripsi', e.target.value)} className="w-full text-[11px] p-1 border rounded focus:outline-none" placeholder="Deskripsi..." />
+                          {renderAspectDescriptionEditor(siswa, 'experience')}
                         </td>
                       </tr>
                     ))}
@@ -4871,7 +4938,7 @@ export default function App() {
                           </select>
                         </td>
                         <td className="p-1">
-                          <textarea rows={2} value={siswa.inklusivitas.deskripsi} onChange={(e) => updateStudentField(siswa.no, 'inklusivitas', 'deskripsi', e.target.value)} className="w-full text-[11px] p-1 border rounded focus:outline-none" placeholder="Deskripsi..." />
+                          {renderAspectDescriptionEditor(siswa, 'inklusivitas')}
                         </td>
                       </tr>
                     ))}
@@ -8145,14 +8212,14 @@ export default function App() {
                   <div className="p-2.5 bg-white">
                     <textarea
                       rows={4}
-                      value={selectedStudent.deskripsiRapor ?? generateDefaultDeskripsi(selectedStudent)}
+                      value={getReportDescription(selectedStudent)}
                       onChange={(e) => updateStudentDeskripsiRapor(selectedStudent.no, e.target.value)}
                       className="w-full text-xs leading-relaxed text-black bg-transparent focus:bg-slate-50 rounded focus:outline-none resize-y border-none font-sans print:hidden"
                       placeholder="Tuliskan refleksi capaian perkembangan siswa..."
                     />
                     {/* Tampilan teks statis saat dicetak */}
                     <div className="hidden print:block text-xs leading-relaxed">
-                      {splitReportText(selectedStudent.deskripsiRapor ?? generateDefaultDeskripsi(selectedStudent)).map((paragraph, index) => (
+                      {splitReportText(getReportDescription(selectedStudent)).map((paragraph, index) => (
                         <p key={`refleksi-${index}`} className="report-text-paragraph">{paragraph}</p>
                       ))}
                     </div>
