@@ -2700,7 +2700,7 @@ export default function App() {
     }
 
     try {
-      const rows = await readSheet(file, 0);
+      const rows = await readSheet(file, 1);
       const normalizeHeader = (value: unknown) => String(value ?? '').trim().toUpperCase().replace(/[._-]+/g, ' ').replace(/\s+/g, ' ');
       const headerAliases: Record<string, string> = {
         NO: 'no',
