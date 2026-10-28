@@ -535,6 +535,18 @@ const generateDefaultSaran = (siswa: SiswaData): string => {
   return `Berdasarkan hasil evaluasi capaian perkembangan, berikut saran pembimbingan dan tindak lanjut prioritas berdasarkan aspek yang perlu ditingkatkan:\n\n${saranList}\n\n*Catatan Kolaborasi: Disarankan adanya komunikasi aktif dan kerjasama pendampingan yang berkesinambungan antara pihak sekolah dan orang tua di rumah agar pembiasaan positif di atas dapat tercapai secara maksimal.`;
 };
 
+const splitReportText = (text: string) =>
+  text.split(/\r?\n\s*\r?\n/).map((paragraph) => paragraph.trim()).filter(Boolean);
+
+const escapeHtml = (text: string) =>
+  text.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character] || character);
+
 interface AspectAnalysis {
   id: string;
   no: number;
@@ -1049,6 +1061,60 @@ export const PAPER_SIZES = [
   { id: 'Legal', label: 'Legal (216 × 356 mm)', width: '216mm', height: '356mm', desc: 'Ukuran Panjang' }
 ];
 
+const mergeAssessmentSection = <T extends object>(defaults: T, value: unknown): T => ({
+  ...defaults,
+  ...(value && typeof value === 'object' ? value : {})
+}) as T;
+
+const normalizeAssessmentRecord = (value: unknown): SiswaAssessmentRecord => {
+  const defaults = createEmptyAssessmentRecord();
+  const source = value && typeof value === 'object'
+    ? value as Partial<SiswaAssessmentRecord>
+    : {};
+
+  return {
+    ...defaults,
+    ...source,
+    kognitif: mergeAssessmentSection(defaults.kognitif, source.kognitif),
+    afektif: mergeAssessmentSection(defaults.afektif, source.afektif),
+    psikomotor: mergeAssessmentSection(defaults.psikomotor, source.psikomotor),
+    sosial: mergeAssessmentSection(defaults.sosial, source.sosial),
+    islamicLiteracy: mergeAssessmentSection(defaults.islamicLiteracy, source.islamicLiteracy),
+    bilingual: mergeAssessmentSection(defaults.bilingual, source.bilingual),
+    talents: mergeAssessmentSection(defaults.talents, source.talents),
+    experience: mergeAssessmentSection(defaults.experience, source.experience),
+    inklusivitas: mergeAssessmentSection(defaults.inklusivitas, source.inklusivitas)
+  };
+};
+
+const normalizeStudentRecords = (value: unknown): StudentRecord[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((student): student is Record<string, any> => Boolean(student && typeof student === 'object'))
+    .map((student, index) => {
+      const quarters = student.triwulan && typeof student.triwulan === 'object'
+        ? student.triwulan
+        : {};
+
+      return {
+        ...student,
+        no: Number(student.no) || index + 1,
+        nama: typeof student.nama === 'string' ? student.nama : '',
+        nis: typeof student.nis === 'string' ? student.nis : '',
+        kelas: typeof student.kelas === 'string' ? student.kelas : 'IV (Empat)',
+        tahunAjaran: typeof student.tahunAjaran === 'string' ? student.tahunAjaran : '2026/2027',
+        triwulan: {
+          T1: normalizeAssessmentRecord(quarters.T1),
+          T2: normalizeAssessmentRecord(quarters.T2),
+          T3: normalizeAssessmentRecord(quarters.T3),
+          T4: normalizeAssessmentRecord(quarters.T4)
+        }
+      };
+    })
+    .sort((left, right) => left.no - right.no);
+};
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [activeTriwulan, setActiveTriwulan] = useState<TriwulanKey>('T1');
@@ -1123,7 +1189,7 @@ export default function App() {
   const [masterStudents, setMasterStudents] = useState<StudentRecord[]>(() => {
     try {
       const saved = localStorage.getItem('rapor_master_multiquarter_v2');
-      if (saved) return JSON.parse(saved);
+      if (saved) return normalizeStudentRecords(JSON.parse(saved));
     } catch (err) {
       console.warn('LocalStorage error loading masterStudents:', err);
     }
@@ -1311,15 +1377,13 @@ export default function App() {
         if (snapshot.exists()) {
           const val = snapshot.val();
           if (Array.isArray(val)) {
-            setMasterStudents(val);
+            setMasterStudents(normalizeStudentRecords(val));
           } else if (typeof val === 'object' && val !== null) {
             if (val.__emptyDatabase === true) {
               setMasterStudents([]);
               return;
             }
-            const arr = Object.values(val) as StudentRecord[];
-            arr.sort((a, b) => a.no - b.no);
-            setMasterStudents(arr);
+            setMasterStudents(normalizeStudentRecords(Object.values(val)));
           }
         } else {
           // Inisialisasi awal ke Firebase jika masih kosong
@@ -1466,8 +1530,9 @@ export default function App() {
     setIsFirebaseSyncing(true);
     try {
       const studentsRef = ref(db, 'students');
-      await set(studentsRef, newStudents.length > 0 ? newStudents : { __emptyDatabase: true });
-      setMasterStudents(newStudents);
+      const normalizedStudents = normalizeStudentRecords(newStudents);
+      await set(studentsRef, normalizedStudents.length > 0 ? normalizedStudents : { __emptyDatabase: true });
+      setMasterStudents(normalizedStudents);
       toastSuccess(
         'Data Siswa Berhasil Disimpan',
         customMsg || 'Data penilaian siswa berhasil diperbarui ke Firebase Realtime Database.'
@@ -2098,8 +2163,8 @@ export default function App() {
         <div style="border-bottom: 1px solid #000; padding: 4px 8px; font-weight: bold; font-size: 11px; text-transform: uppercase; background-color: #ffffff; color: #000;">
           Refleksi Perkembangan Siswa:
         </div>
-        <div style="padding: 8px 10px; font-size: 11px; line-height: 1.5; color: #000; white-space: pre-wrap; min-height: 45px;">
-          ${studentDeskripsi}
+        <div style="padding: 8px 10px; font-size: 11px; line-height: 1.5; color: #000; min-height: 45px;">
+          ${splitReportText(studentDeskripsi).map((paragraph) => `<p class="report-text-paragraph">${escapeHtml(paragraph)}</p>`).join('')}
         </div>
       </div>
 
@@ -2108,8 +2173,8 @@ export default function App() {
         <div style="border-bottom: 1px solid #000; padding: 4px 8px; font-weight: bold; font-size: 11px; text-transform: uppercase; background-color: #ffffff; color: #000;">
           Saran:
         </div>
-        <div style="padding: 8px 10px; font-size: 11px; line-height: 1.5; color: #000; white-space: pre-wrap; min-height: 45px;">
-          ${studentSaran}
+        <div style="padding: 8px 10px; font-size: 11px; line-height: 1.5; color: #000; min-height: 45px;">
+          ${splitReportText(studentSaran).map((paragraph) => `<p class="report-text-paragraph">${escapeHtml(paragraph)}</p>`).join('')}
         </div>
       </div>
 
@@ -2228,6 +2293,17 @@ export default function App() {
     .report-aspect-group, .report-aspect-group tr {
       break-inside: avoid;
       page-break-inside: avoid;
+    }
+    .report-text-paragraph {
+      margin: 0 0 6px;
+      white-space: pre-wrap;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      orphans: 3;
+      widows: 3;
+    }
+    .report-text-paragraph:last-child {
+      margin-bottom: 0;
     }
     .text-center { text-align: center; }
     .text-left { text-align: left; }
@@ -8093,8 +8169,8 @@ export default function App() {
                 </div>
 
                 {/* 4. REFLEKSI PERKEMBANGAN SISWA */}
-                <div className="border border-black mb-4 overflow-hidden bg-white">
-                  <div className="border-b border-black px-3 py-1 font-bold text-xs uppercase flex items-center justify-between text-black bg-slate-50">
+                <div className="report-print-section border border-black mb-4 overflow-hidden bg-white">
+                  <div className="report-print-section-heading border-b border-black px-3 py-1 font-bold text-xs uppercase flex items-center justify-between text-black bg-slate-50">
                     <span>Refleksi Perkembangan Siswa:</span>
                     <button
                       onClick={() => {
@@ -8117,15 +8193,17 @@ export default function App() {
                       placeholder="Tuliskan refleksi capaian perkembangan siswa..."
                     />
                     {/* Tampilan teks statis saat dicetak */}
-                    <div className="hidden print:block text-xs leading-relaxed whitespace-pre-wrap">
-                      {selectedStudent.deskripsiRapor ?? generateDefaultDeskripsi(selectedStudent)}
+                    <div className="hidden print:block text-xs leading-relaxed">
+                      {splitReportText(selectedStudent.deskripsiRapor ?? generateDefaultDeskripsi(selectedStudent)).map((paragraph, index) => (
+                        <p key={`refleksi-${index}`} className="report-text-paragraph">{paragraph}</p>
+                      ))}
                     </div>
                   </div>
                 </div>
 
                 {/* 5. SARAN */}
-                <div className="border border-black mb-6 overflow-hidden bg-white">
-                  <div className="border-b border-black px-3 py-1 font-bold text-xs uppercase flex items-center justify-between text-black bg-slate-50">
+                <div className="report-print-section border border-black mb-6 overflow-hidden bg-white">
+                  <div className="report-print-section-heading border-b border-black px-3 py-1 font-bold text-xs uppercase flex items-center justify-between text-black bg-slate-50">
                     <span>Saran:</span>
                     <button
                       onClick={() => {
@@ -8148,8 +8226,10 @@ export default function App() {
                       placeholder="Tuliskan saran tindak lanjut bagi siswa..."
                     />
                     {/* Tampilan teks statis saat dicetak */}
-                    <div className="hidden print:block text-xs leading-relaxed whitespace-pre-wrap">
-                      {selectedStudent.saranRapor ?? generateDefaultSaran(selectedStudent)}
+                    <div className="hidden print:block text-xs leading-relaxed">
+                      {splitReportText(selectedStudent.saranRapor ?? generateDefaultSaran(selectedStudent)).map((paragraph, index) => (
+                        <p key={`saran-${index}`} className="report-text-paragraph">{paragraph}</p>
+                      ))}
                     </div>
                   </div>
                 </div>
