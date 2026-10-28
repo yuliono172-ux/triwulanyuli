@@ -12,6 +12,7 @@ export interface DimensionPredictionItem {
   kategori: string;
   colorBorder: string;
   colorBg: string;
+  hasData: boolean;
   currentScore: number;
   currentGrade: string;
   historicalDelta: number;
@@ -49,7 +50,7 @@ export interface StudentQuarterPredictionResult {
 }
 
 export const getGradeFromScore = (score: number | null): string => {
-  if (score === null || isNaN(score)) return '-';
+  if (score === null || !Number.isFinite(score)) return '-';
   if (score >= 4.5) return 'Exceptional';
   if (score >= 3.5) return 'A';
   if (score >= 2.5) return 'B';
@@ -79,7 +80,7 @@ export const getGradeLabelDescription = (grade: string): string => {
 export const predictNextQuarterAchievement = (
   siswa: SiswaData,
   activeTriwulan: TriwulanKey,
-  historicalQuarters: Array<Record<string, any>>
+  historicalQuarters: ReadonlyArray<Record<string, unknown> | null | undefined> = []
 ): StudentQuarterPredictionResult => {
   // Label periode triwulan
   let currentQuarterLabel = 'Triwulan I (Awal)';
@@ -109,45 +110,56 @@ export const predictNextQuarterAchievement = (
     confidenceLevel = 'Tinggi';
   }
 
-  // Hitung prediksi tiap dimensi
+  const quarterIndex = Number(activeTriwulan.slice(1)) - 1;
+  const toValidScore = (value: unknown): number | null => {
+    if (typeof value !== 'number' && (typeof value !== 'string' || value.trim() === '')) return null;
+    const score = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(score) && score >= 1 && score <= 5 ? score : null;
+  };
+  const getHistoryScore = (quarterIndex: number, aspectId: string): number | null => {
+    const quarter = historicalQuarters[quarterIndex];
+    if (!quarter || typeof quarter !== 'object') return null;
+    return toValidScore(
+      quarter[aspectId] ??
+      (aspectId === 'islamicLiteracy' ? quarter.islamic_literacy : undefined)
+    );
+  };
+
+  // Hitung prediksi tiap dimensi dengan memakai hanya skor terukur.
   const aspectPredictions: DimensionPredictionItem[] = ASPEK_LIST.map((asp) => {
-    // Ambil deret nilai historis
-    const q1 = Number(historicalQuarters[0]?.[asp.id] ?? historicalQuarters[0]?.['islamic_literacy'] ?? 3.5);
-    const q2 = Number(historicalQuarters[1]?.[asp.id] ?? historicalQuarters[1]?.['islamic_literacy'] ?? 3.5);
-    const q3 = Number(historicalQuarters[2]?.[asp.id] ?? historicalQuarters[2]?.['islamic_literacy'] ?? 3.5);
-    const q4 = Number(historicalQuarters[3]?.[asp.id] ?? historicalQuarters[3]?.['islamic_literacy'] ?? 3.5);
-
-    let currentScore = q4;
-    let momentum = 0;
-    let historicalDelta = 0;
-
-    if (activeTriwulan === 'T1') {
-      currentScore = q1;
-      // Pada T1, momentum estimasi didasarkan pada kesiapan dasar
-      historicalDelta = 0.18;
-      momentum = 0.18;
-    } else if (activeTriwulan === 'T2') {
-      currentScore = q2;
-      historicalDelta = Number((q2 - q1).toFixed(2));
-      momentum = Number((historicalDelta * 0.75 + 0.08).toFixed(2));
-    } else if (activeTriwulan === 'T3') {
-      currentScore = q3;
-      const d1 = q3 - q2;
-      const d0 = q2 - q1;
-      historicalDelta = Number(d1.toFixed(2));
-      momentum = Number((d1 * 0.65 + d0 * 0.35).toFixed(2));
-    } else {
-      currentScore = q4;
-      const d2 = q4 - q3;
-      const d1 = q3 - q2;
-      const d0 = q2 - q1;
-      historicalDelta = Number(d2.toFixed(2));
-      momentum = Number((d2 * 0.5 + d1 * 0.3 + d0 * 0.2).toFixed(2));
-    }
+    const section = siswa?.[asp.id as keyof SiswaData] as Record<string, string> | undefined;
+    const indicatorScores = asp.indikatorList
+      .map((indicator) => toValidScore(GRADE_WEIGHTS[section?.[indicator.key] || '']))
+      .filter((score): score is number => score !== null);
+    const manualGrade = siswa?.overallGrades?.[asp.id];
+    const manualScore = toValidScore(manualGrade ? GRADE_WEIGHTS[manualGrade] : null);
+    const currentScoreMeasured = manualScore ??
+      (indicatorScores.length > 0
+        ? indicatorScores.reduce((sum, score) => sum + score, 0) / indicatorScores.length
+        : getHistoryScore(quarterIndex, asp.id));
+    const hasData = currentScoreMeasured !== null;
+    const currentScore = currentScoreMeasured ?? 0;
+    const observedHistory = historicalQuarters
+      .slice(0, quarterIndex)
+      .map((_, index) => getHistoryScore(index, asp.id))
+      .filter((score): score is number => score !== null);
+    const previousScore = observedHistory.at(-1);
+    const priorPreviousScore = observedHistory.at(-2);
+    const historicalDelta = previousScore === undefined
+      ? 0
+      : Number((currentScore - previousScore).toFixed(2));
+    const priorDelta = previousScore !== undefined && priorPreviousScore !== undefined
+      ? previousScore - priorPreviousScore
+      : historicalDelta;
+    const momentum = hasData
+      ? Number((historicalDelta * 0.65 + priorDelta * 0.35).toFixed(2))
+      : 0;
 
     // Koreksi pembobotan skor (diminishing return jika sudah mendekati 5.0)
     let projectedAddition = 0;
-    if (momentum > 0) {
+    if (!hasData) {
+      projectedAddition = 0;
+    } else if (momentum > 0) {
       const headroom = Math.max(0, 5.0 - currentScore);
       // Batasi akselerasi agar realistis
       projectedAddition = Math.min(momentum * 0.85, headroom * 0.65, 0.42);
@@ -162,7 +174,7 @@ export const predictNextQuarterAchievement = (
       projectedAddition = currentScore < 4.8 ? 0.08 : 0.03;
     }
 
-    const rawPredicted = Math.max(1.0, Math.min(5.0, currentScore + projectedAddition));
+    const rawPredicted = hasData ? Math.max(1.0, Math.min(5.0, currentScore + projectedAddition)) : 0;
     const predictedScore = Number(rawPredicted.toFixed(2));
     const scoreDiff = Number((predictedScore - currentScore).toFixed(2));
     const percentChange = currentScore > 0 ? Number(((scoreDiff / currentScore) * 100).toFixed(1)) : 0;
@@ -184,7 +196,9 @@ export const predictNextQuarterAchievement = (
 
     // Insight khusus dimensi
     let insight = '';
-    if (status === 'MELOJIT') {
+    if (!hasData) {
+      insight = 'Belum ada nilai indikator untuk menyusun prediksi pada aspek ini.';
+    } else if (status === 'MELOJIT') {
       insight = `Momentum sangat tinggi. Berikan pengayaan materi dan tantangan mandiri agar melompat ke predikat ${predictedGrade}.`;
     } else if (status === 'MENINGKAT') {
       insight = `Tren pertumbuhan stabil positif (+${scoreDiff}). Lanjutkan pembiasaan terstruktur di kelas dan rumah.`;
@@ -201,6 +215,7 @@ export const predictNextQuarterAchievement = (
       kategori: asp.kategori,
       colorBorder: asp.colorBorder,
       colorBg: asp.colorBg,
+      hasData,
       currentScore,
       currentGrade,
       historicalDelta,
@@ -215,20 +230,21 @@ export const predictNextQuarterAchievement = (
   });
 
   // Hitung rerata skor saat ini dan prediksi
-  const currentAverageScore = Number(
-    (aspectPredictions.reduce((acc, a) => acc + a.currentScore, 0) / 9).toFixed(2)
-  );
-  const predictedAverageScore = Number(
-    (aspectPredictions.reduce((acc, a) => acc + a.predictedScore, 0) / 9).toFixed(2)
-  );
+  const ratedAspects = aspectPredictions.filter((aspect) => aspect.hasData);
+  const currentAverageScore = ratedAspects.length > 0
+    ? Number((ratedAspects.reduce((acc, aspect) => acc + aspect.currentScore, 0) / ratedAspects.length).toFixed(2))
+    : 0;
+  const predictedAverageScore = ratedAspects.length > 0
+    ? Number((ratedAspects.reduce((acc, aspect) => acc + aspect.predictedScore, 0) / ratedAspects.length).toFixed(2))
+    : 0;
 
   const averageDiff = Number((predictedAverageScore - currentAverageScore).toFixed(2));
   const averagePercentChange = currentAverageScore > 0
     ? Number(((averageDiff / currentAverageScore) * 100).toFixed(1))
     : 0;
 
-  const currentOverallGrade = getGradeFromScore(currentAverageScore);
-  const predictedOverallGrade = getGradeFromScore(predictedAverageScore);
+  const currentOverallGrade = getGradeFromScore(ratedAspects.length > 0 ? currentAverageScore : null);
+  const predictedOverallGrade = getGradeFromScore(ratedAspects.length > 0 ? predictedAverageScore : null);
 
   // Status kesiapan
   let readinessStatus:
@@ -237,7 +253,9 @@ export const predictNextQuarterAchievement = (
     | 'Stabil Konsisten'
     | 'Memerlukan Stimulasi Intensif' = 'Berkembang Positif';
 
-  if (averageDiff >= 0.2) {
+  if (ratedAspects.length === 0) {
+    readinessStatus = 'Stabil Konsisten';
+  } else if (averageDiff >= 0.2) {
     readinessStatus = 'Sangat Siap Melompat';
   } else if (averageDiff >= 0.06) {
     readinessStatus = 'Berkembang Positif';
@@ -248,21 +266,22 @@ export const predictNextQuarterAchievement = (
   }
 
   // Aspek lonjakan tertinggi & aspek prioritas intervensi
-  const sortedByGrowth = [...aspectPredictions].sort((a, b) => b.scoreDiff - a.scoreDiff);
+  const sortedByGrowth = aspectPredictions.filter((aspect) => aspect.hasData).sort((a, b) => b.scoreDiff - a.scoreDiff);
   const topAcceleratingAspects = sortedByGrowth.slice(0, 3);
 
-  const sortedByUrgency = [...aspectPredictions].sort((a, b) => a.predictedScore - b.predictedScore);
+  const sortedByUrgency = aspectPredictions.filter((aspect) => aspect.hasData).sort((a, b) => a.predictedScore - b.predictedScore);
   const priorityInterventionAspects = sortedByUrgency.slice(0, 2);
 
   const topAspectNames = topAcceleratingAspects.map((a) => a.nama).join(', ');
   const priorityAspectNames = priorityInterventionAspects.map((a) => a.nama).join(' serta ');
 
   // Deskripsi ringkasan naratif
-  const summaryDescription =
-    `Berdasarkan analisis tren kenaikan historis pada Spider Chart, ananda ${siswa.nama} diproyeksikan memiliki potensi pertumbuhan rerata sebesar ` +
+  const summaryDescription = ratedAspects.length === 0
+    ? `Belum ada nilai indikator yang dapat digunakan untuk membuat prediksi perkembangan ${siswa?.nama || 'siswa'} pada ${targetQuarterLabel}.`
+    : `Berdasarkan analisis tren kenaikan historis pada Spider Chart, ananda ${siswa.nama} diproyeksikan memiliki potensi pertumbuhan rerata sebesar ` +
     `${averageDiff >= 0 ? `+${averageDiff}` : averageDiff} poin (${averagePercentChange >= 0 ? `+${averagePercentChange}` : averagePercentChange}%) ` +
     `menuju skor estimasi ${predictedAverageScore} / 5.0 (Predikat ${predictedOverallGrade}) pada ${targetQuarterLabel}. ` +
-    `Peluang akselerasi tertinggi terpantau pada dimensi ${topAspectNames}, sementara dimensi ${priorityAspectNames} ` +
+    `Peluang akselerasi tertinggi terpantau pada dimensi ${topAspectNames || 'yang telah dinilai'}, sementara dimensi ${priorityAspectNames || 'yang membutuhkan perhatian'} ` +
     `membutuhkan pendampingan kolaboratif agar terhindar dari potensi hambatan belajar.`;
 
   // Rencana aksi guru

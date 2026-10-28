@@ -14,22 +14,22 @@ import {
 } from '../types/rapor';
 
 export const getAspectNumericGrade = (val: string): number => {
-  return GRADE_WEIGHTS[val] || 0;
+  return Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, val) ? GRADE_WEIGHTS[val] : 0;
 };
 
 export const calculateAspectScoreFromRecord = (
-  aspectRecord: Record<string, string>,
+  aspectRecord: Record<string, string | undefined> | null | undefined,
   keys: string[]
 ): { score: number | null; hasData: boolean; average: number } => {
   const filledValues = keys
-    .map((k) => aspectRecord[k])
-    .filter((v) => Boolean(v && GRADE_WEIGHTS[v]));
+    .map((k) => aspectRecord?.[k])
+    .filter((v): v is string => Boolean(v && Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, v)));
 
   if (filledValues.length === 0) {
     return { score: null, hasData: false, average: 0 };
   }
 
-  const sum = filledValues.reduce((acc, v) => acc + (GRADE_WEIGHTS[v] || 0), 0);
+  const sum = filledValues.reduce((acc, v) => acc + GRADE_WEIGHTS[v], 0);
   const avg = sum / filledValues.length;
   return {
     score: Number(avg.toFixed(2)),
@@ -39,7 +39,7 @@ export const calculateAspectScoreFromRecord = (
 };
 
 export const getGradeFromScore = (score: number | null): string => {
-  if (score === null) return '-';
+  if (score === null || !Number.isFinite(score)) return '-';
   if (score >= 4.5) return 'Exceptional';
   if (score >= 3.5) return 'A';
   if (score >= 2.5) return 'B';
@@ -48,18 +48,19 @@ export const getGradeFromScore = (score: number | null): string => {
 };
 
 export const getStudentSpiderAnalysis = (
-  assessment: SiswaAssessmentRecord,
+  assessment: Partial<SiswaAssessmentRecord> | null | undefined,
   namaSiswa: string = 'Siswa'
 ): SpiderAnalysisResult => {
+  const safeAssessment = assessment && typeof assessment === 'object' ? assessment : {};
   let totalScoreSum = 0;
   let hasAnyData = false;
   let validAspectCount = 0;
 
   const aspects: AspectAnalysis[] = ASPEK_LIST.map((asp) => {
-    const sec = (assessment[asp.id as keyof SiswaAssessmentRecord] as Record<string, string>) || {};
+    const sec = safeAssessment[asp.id as keyof SiswaAssessmentRecord] as Record<string, string | undefined> | undefined;
     const filledIndicators = asp.indikatorList.map((ind) => {
-      const rating = sec[ind.key] || '';
-      const score = GRADE_WEIGHTS[rating] || 0;
+      const rating = sec?.[ind.key] || '';
+      const score = getAspectNumericGrade(rating);
       return {
         ...ind,
         rating,
@@ -68,7 +69,9 @@ export const getStudentSpiderAnalysis = (
     });
 
     const activeIndicators = filledIndicators.filter((i) => i.score > 0);
-    const hasData = activeIndicators.length > 0;
+    const manualGrade = safeAssessment.overallGrades?.[asp.id];
+    const manualScore = getAspectNumericGrade(manualGrade || '');
+    const hasData = activeIndicators.length > 0 || manualScore > 0;
 
     let score = 0;
     let percentage = 0;
@@ -77,7 +80,7 @@ export const getStudentSpiderAnalysis = (
     if (hasData) {
       hasAnyData = true;
       const sum = activeIndicators.reduce((acc, curr) => acc + curr.score, 0);
-      score = Number((sum / activeIndicators.length).toFixed(2));
+      score = manualScore || Number((sum / activeIndicators.length).toFixed(2));
       percentage = Math.round((score / 5) * 100);
       grade = getGradeFromScore(score);
       totalScoreSum += score;
@@ -145,7 +148,7 @@ export const getStudentSpiderAnalysis = (
 
   const weaknessesSummary = topWeaknesses.length > 0
     ? `Fokus stimulasi dan bimbingan terarah disarankan pada aspek ${topWeaknesses.map((w) => `${w.nama} (${w.score}/5.0)`).join(', ')}.`
-    : 'Seluruh aspek berada dalam capaian memuaskan.';
+  : hasAnyData ? 'Seluruh aspek yang dinilai berada dalam capaian memuaskan.' : 'Belum ada data untuk menentukan area pendampingan.';
 
   return {
     aspects,
@@ -168,8 +171,8 @@ export const compareTwoQuarters = (
   const periodeA = TRIWULAN_OPTIONS.find((t) => t.id === quarterAId) || TRIWULAN_OPTIONS[0];
   const periodeB = TRIWULAN_OPTIONS.find((t) => t.id === quarterBId) || TRIWULAN_OPTIONS[1];
 
-  const dataA = student.triwulan[quarterAId] || {};
-  const dataB = student.triwulan[quarterBId] || {};
+  const dataA = student?.triwulan?.[quarterAId] || {};
+  const dataB = student?.triwulan?.[quarterBId] || {};
 
   const analysisA = getStudentSpiderAnalysis(dataA, student.nama);
   const analysisB = getStudentSpiderAnalysis(dataB, student.nama);
@@ -184,18 +187,20 @@ export const compareTwoQuarters = (
     const aspA = analysisA.aspects.find((a) => a.id === asp.id);
     const aspB = analysisB.aspects.find((a) => a.id === asp.id);
 
-    const scoreA = aspA && aspA.hasData ? aspA.score : 0;
-    const scoreB = aspB && aspB.hasData ? aspB.score : 0;
     const hasDataA = Boolean(aspA?.hasData);
     const hasDataB = Boolean(aspB?.hasData);
-
-    const selisih = Number((scoreB - scoreA).toFixed(2));
-    const persenPerubahan = scoreA > 0 ? Number(((selisih / scoreA) * 100).toFixed(1)) : 0;
+    const scoreA = hasDataA ? aspA!.score : 0;
+    const scoreB = hasDataB ? aspB!.score : 0;
+    const comparable = hasDataA && hasDataB;
+    const selisih = comparable ? Number((scoreB - scoreA).toFixed(2)) : 0;
+    const persenPerubahan = comparable && scoreA > 0 ? Number(((selisih / scoreA) * 100).toFixed(1)) : 0;
 
     let status: 'NAIK' | 'STAGNAN' | 'TURUN' = 'STAGNAN';
     let statusSymbol = '→';
 
-    if (selisih > 0.001) {
+    if (!comparable) {
+      statusSymbol = '—';
+    } else if (selisih > 0.001) {
       status = 'NAIK';
       statusSymbol = '↑';
       naikCount += 1;
@@ -204,7 +209,6 @@ export const compareTwoQuarters = (
       statusSymbol = '↓';
       turunCount += 1;
     } else {
-      status = 'STAGNAN';
       statusSymbol = '→';
       stagnanCount += 1;
     }
@@ -215,14 +219,17 @@ export const compareTwoQuarters = (
     const indicators: IndicatorComparisonItem[] = asp.indikatorList.map((ind) => {
       const ratingA = secA[ind.key] || '';
       const ratingB = secB[ind.key] || '';
-      const scA = GRADE_WEIGHTS[ratingA] || 0;
-      const scB = GRADE_WEIGHTS[ratingB] || 0;
-      const indSelisih = Number((scB - scA).toFixed(1));
+      const scA = getAspectNumericGrade(ratingA);
+      const scB = getAspectNumericGrade(ratingB);
+      const comparableIndicator = scA > 0 && scB > 0;
+      const indSelisih = comparableIndicator ? Number((scB - scA).toFixed(1)) : 0;
 
       let indStatus: 'NAIK' | 'STAGNAN' | 'TURUN' = 'STAGNAN';
       let indSymbol = '→';
 
-      if (indSelisih > 0) {
+      if (!comparableIndicator) {
+        indSymbol = '—';
+      } else if (indSelisih > 0) {
         indStatus = 'NAIK';
         indSymbol = '↑';
       } else if (indSelisih < 0) {
@@ -271,23 +278,28 @@ export const compareTwoQuarters = (
 
   const rerataA = analysisA.averageScore;
   const rerataB = analysisB.averageScore;
-  const selisihRerata = Number((rerataB - rerataA).toFixed(2));
-  const persenRerata = rerataA > 0 ? Number(((selisihRerata / rerataA) * 100).toFixed(1)) : 0;
+  const hasBothQuarterData = analysisA.hasData && analysisB.hasData;
+  const selisihRerata = hasBothQuarterData ? Number((rerataB - rerataA).toFixed(2)) : 0;
+  const persenRerata = hasBothQuarterData && rerataA > 0 ? Number(((selisihRerata / rerataA) * 100).toFixed(1)) : 0;
 
   const statusRerata: 'NAIK' | 'STAGNAN' | 'TURUN' =
-    selisihRerata > 0.001 ? 'NAIK' : selisihRerata < -0.001 ? 'TURUN' : 'STAGNAN';
+    !hasBothQuarterData ? 'STAGNAN' : selisihRerata > 0.001 ? 'NAIK' : selisihRerata < -0.001 ? 'TURUN' : 'STAGNAN';
 
-  const sortedAspectsByGrowth = [...aspectComparisons].sort((a, b) => b.selisih - a.selisih);
+  const comparableAspects = aspectComparisons.filter((aspect) => aspect.hasDataA && aspect.hasDataB);
+  const comparableIndicators = allIndicatorComparisons.filter((indicator) => indicator.scoreA > 0 && indicator.scoreB > 0);
+  const sortedAspectsByGrowth = [...comparableAspects].sort((a, b) => b.selisih - a.selisih);
   const highestGrowthAspect = sortedAspectsByGrowth[0] || aspectComparisons[0];
   const biggestDropAspect = sortedAspectsByGrowth[sortedAspectsByGrowth.length - 1] || aspectComparisons[0];
 
-  const sortedIndicatorsByGrowth = [...allIndicatorComparisons].sort((a, b) => b.selisih - a.selisih);
+  const sortedIndicatorsByGrowth = [...comparableIndicators].sort((a, b) => b.selisih - a.selisih);
   const highestGrowthIndicator = sortedIndicatorsByGrowth[0] || allIndicatorComparisons[0];
   const biggestDropIndicator = sortedIndicatorsByGrowth[sortedIndicatorsByGrowth.length - 1] || allIndicatorComparisons[0];
 
   // Deskripsi Otomatis (Requirement 12)
   let deskripsiOtomatis = '';
-  if (naikCount >= 5) {
+  if (comparableAspects.length === 0) {
+    deskripsiOtomatis = `Belum tersedia data yang cukup untuk membandingkan ${periodeA.label} dan ${periodeB.label}.`;
+  } else if (naikCount >= 5) {
     deskripsiOtomatis = `Secara umum perkembangan Ananda ${student.nama} menunjukkan peningkatan yang sangat baik dan positif. Dari 9 aspek yang dibandingkan antara ${periodeA.label} dan ${periodeB.label}, sebanyak ${naikCount} aspek mengalami kenaikan, ${stagnanCount} aspek stagnan (stabil), dan ${turunCount} aspek mengalami penurunan. Peningkatan paling menonjol dicapai pada aspek ${highestGrowthAspect.nama} (${highestGrowthAspect.selisih >= 0 ? `+${highestGrowthAspect.selisih}` : highestGrowthAspect.selisih}), serta indikator ${highestGrowthIndicator.nama} (${highestGrowthIndicator.selisih >= 0 ? `+${highestGrowthIndicator.selisih}` : highestGrowthIndicator.selisih}).`;
   } else if (turunCount >= 5) {
     deskripsiOtomatis = `Secara umum terdapat beberapa aspek yang perlu mendapatkan perhatian karena mengalami penurunan dibandingkan periode sebelumnya. Dari 9 aspek yang dibandingkan antara ${periodeA.label} dan ${periodeB.label}, sebanyak ${turunCount} aspek mengalami penurunan, ${stagnanCount} aspek tetap, dan ${naikCount} aspek menunjukkan peningkatan. Fokus pendampingan dan bimbingan prioritas disarankan pada aspek ${biggestDropAspect.nama} (${biggestDropAspect.selisih}), khususnya pada indikator ${biggestDropIndicator.nama}.`;
@@ -332,10 +344,10 @@ export const getAllQuartersComparison = (student: StudentRecord): {
     [key: string]: any;
   }[];
 } => {
-  const analysisT1 = getStudentSpiderAnalysis(student.triwulan.T1, student.nama);
-  const analysisT2 = getStudentSpiderAnalysis(student.triwulan.T2, student.nama);
-  const analysisT3 = getStudentSpiderAnalysis(student.triwulan.T3, student.nama);
-  const analysisT4 = getStudentSpiderAnalysis(student.triwulan.T4, student.nama);
+  const analysisT1 = getStudentSpiderAnalysis(student?.triwulan?.T1, student?.nama || 'Siswa');
+  const analysisT2 = getStudentSpiderAnalysis(student?.triwulan?.T2, student?.nama || 'Siswa');
+  const analysisT3 = getStudentSpiderAnalysis(student?.triwulan?.T3, student?.nama || 'Siswa');
+  const analysisT4 = getStudentSpiderAnalysis(student?.triwulan?.T4, student?.nama || 'Siswa');
 
   const aspects: AllQuartersAspectRow[] = ASPEK_LIST.map((asp) => {
     const asp1 = analysisT1.aspects.find((a) => a.id === asp.id);

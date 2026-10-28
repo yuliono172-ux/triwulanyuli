@@ -26,7 +26,7 @@ export const STUDENT_NAMES: { no: number; nama: string; nis: string }[] = [
   { no: 23, nama: 'LAFISYA ORLIN KALINGGA', nis: '202340023' },
   { no: 24, nama: 'MAHREEN SHAFANA ALMAHYRA', nis: '202340025' },
   { no: 25, nama: 'MIRZA AMMAR AHZAALAN', nis: '202340026' },
-  { no: 26, nama: 'MUHAMMAD树GAOZHAN AL GHIFARI'.replace('树', ''), nis: '202340027' },
+  { no: 26, nama: 'MUHAMMAD GAOZHAN AL GHIFARI', nis: '202340027' },
   { no: 27, nama: 'PUTRI SALSABILA', nis: '202230022' },
   { no: 28, nama: 'RASYIQUL ABID IBNU PURNOMO', nis: '202340028' },
   { no: 29, nama: 'SHAKIRA RAMADHANI PERMANA', nis: '202340029' },

@@ -77,7 +77,7 @@ import {
   DimensionPredictionItem
 } from './utils/quarterPrediction';
 import { PerbandinganTriwulan } from './components/PerbandinganTriwulan';
-import { db, ref, set, onValue, off, remove, TeacherRecord, AppSettings } from './firebase';
+import { db, ref, set, onValue, remove, TeacherRecord, AppSettings } from './firebase';
 import { useToast } from './components/Toast';
 import { readSheet } from 'read-excel-file/browser';
 import { strToU8, zipSync } from 'fflate';
@@ -472,14 +472,16 @@ const GRADE_WEIGHTS: Record<string, number> = {
 };
 
 const getAspectGrade = (siswa: SiswaData, aspectId: string): string => {
-  if (siswa.overallGrades && siswa.overallGrades[aspectId]) {
+  if (siswa.overallGrades && Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, siswa.overallGrades[aspectId])) {
     return siswa.overallGrades[aspectId];
   }
   const aspekMeta = ASPEK_LIST.find((a) => a.id === aspectId);
   if (!aspekMeta) return '-';
-  const sec = (siswa[aspectId as keyof SiswaData] as Record<string, string>) || {};
-  const values = aspekMeta.indikatorList.map((ind) => sec[ind.key]).filter((v) => v && GRADE_WEIGHTS[v]);
-  if (values.length === 0) return 'Defisit';
+  const sec = (siswa?.[aspectId as keyof SiswaData] as Record<string, string> | undefined) || {};
+  const values = aspekMeta.indikatorList
+    .map((ind) => sec[ind.key])
+    .filter((value): value is string => Boolean(value && Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, value)));
+  if (values.length === 0) return '-';
   const sum = values.reduce((acc, v) => acc + GRADE_WEIGHTS[v], 0);
   const avg = sum / values.length;
   if (avg >= 4.5) return 'Exceptional';
@@ -557,16 +559,22 @@ const getReportDescription = (siswa: SiswaData): string => {
 
 const generateDefaultSaran = (siswa: SiswaData): string => {
   const kelemahan: { nama: string; saran: string }[] = [];
+  let assessedAspectCount = 0;
 
   ASPEK_LIST.forEach((asp) => {
     const grade = getAspectGrade(siswa, asp.id);
+    if (grade !== '-') assessedAspectCount += 1;
     if (grade === 'Defisit' || grade === 'C') {
       kelemahan.push({ nama: asp.nama, saran: asp.saranKelemahan });
     }
   });
 
+  if (assessedAspectCount === 0) {
+    return `Belum ada nilai indikator yang dapat digunakan untuk menyusun saran perkembangan Ananda ${siswa.nama}.`;
+  }
+
   if (kelemahan.length === 0) {
-    return `Alhamdulillah, Ananda ${siswa.nama} telah menunjukkan capaian perkembangan yang sangat baik (A / Exceptional) di seluruh aspek penilaian.\n\nSaran Pengembangan:\nPertahankan semangat belajar dan karakter terpuji yang telah terbangun dengan sangat baik ini. Ananda disarankan untuk terus mengasah potensi kepemimpinan, daya nalar kritis, dan kreativitas diri agar dapat menjadi inspirasi positif bagi teman-teman di lingkungan sekolah.`;
+    return `Ananda ${siswa.nama} telah menunjukkan perkembangan yang baik pada aspek-aspek yang dinilai.\n\nSaran Pengembangan:\nPertahankan semangat belajar dan karakter positif, serta terus asah potensi kepemimpinan, daya nalar kritis, dan kreativitas diri.`;
   }
 
   const saranList = kelemahan
@@ -598,6 +606,7 @@ interface AspectAnalysis {
   score: number;
   percentage: number;
   grade: string;
+  hasData: boolean;
   indicators: {
     key: string;
     kode: string;
@@ -617,6 +626,7 @@ interface SpiderAnalysisResult {
   averageScore: number;
   averagePercentage: number;
   overallGrade: string;
+  hasData: boolean;
   topStrengths: AspectAnalysis[];
   topWeaknesses: AspectAnalysis[];
   strengthsSummary: string;
@@ -625,10 +635,10 @@ interface SpiderAnalysisResult {
 
 const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
   const aspects: AspectAnalysis[] = ASPEK_LIST.map((asp) => {
-    const sec = (siswa[asp.id as keyof SiswaData] as Record<string, string>) || {};
+    const sec = (siswa?.[asp.id as keyof SiswaData] as Record<string, string> | undefined) || {};
     const indicators = asp.indikatorList.map((ind) => {
-      const rating = sec[ind.key] || 'Defisit';
-      const score = GRADE_WEIGHTS[rating] || 1;
+      const rating = sec[ind.key] || '';
+      const score = Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, rating) ? GRADE_WEIGHTS[rating] : 0;
       return {
         ...ind,
         rating,
@@ -636,10 +646,18 @@ const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
       };
     });
 
-    const totalScore = indicators.reduce((acc, curr) => acc + curr.score, 0);
-    const score = Number((totalScore / indicators.length).toFixed(2));
+    const ratedIndicators = indicators.filter((indicator) => indicator.score > 0);
+    const manualGrade = siswa?.overallGrades?.[asp.id];
+    const manualScore = manualGrade && Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, manualGrade)
+      ? GRADE_WEIGHTS[manualGrade]
+      : 0;
+    const hasData = ratedIndicators.length > 0 || manualScore > 0;
+    const totalScore = ratedIndicators.reduce((acc, curr) => acc + curr.score, 0);
+    const score = hasData
+      ? Number((manualScore || totalScore / ratedIndicators.length).toFixed(2))
+      : 0;
     const percentage = Math.round((score / 5) * 100);
-    const grade = getAspectGrade(siswa, asp.id);
+    const grade = hasData ? getAspectGrade(siswa, asp.id) : '-';
 
     const strengthIndicators = indicators
       .filter((ind) => ind.rating === 'Exceptional' || ind.rating === 'A')
@@ -650,7 +668,9 @@ const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
       .map((ind) => `${ind.nama} (${ind.rating})`);
 
     let explanation = '';
-    if (grade === 'Exceptional') {
+    if (!hasData) {
+      explanation = 'Data penilaian untuk dimensi ini belum diisi.';
+    } else if (grade === 'Exceptional') {
       explanation = `Capaian luar biasa (skor ${score} / 5.0). Seluruh indikator dikuasai dengan konsisten melampaui harapan usia.`;
     } else if (grade === 'A') {
       explanation = `Capaian sangat baik (skor ${score} / 5.0). Menunjukkan keunggulan menonjol dengan kemandirian tinggi.`;
@@ -672,6 +692,7 @@ const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
       score,
       percentage,
       grade,
+      hasData,
       indicators,
       strengthIndicators,
       weaknessIndicators,
@@ -679,19 +700,24 @@ const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
     };
   });
 
-  const totalAspectScores = aspects.reduce((sum, a) => sum + a.score, 0);
-  const averageScore = Number((totalAspectScores / aspects.length).toFixed(2));
+  const ratedAspects = aspects.filter((aspect) => aspect.hasData);
+  const totalAspectScores = ratedAspects.reduce((sum, aspect) => sum + aspect.score, 0);
+  const averageScore = ratedAspects.length > 0
+    ? Number((totalAspectScores / ratedAspects.length).toFixed(2))
+    : 0;
   const averagePercentage = Math.round((averageScore / 5) * 100);
 
-  let overallGrade = 'B';
-  if (averageScore >= 4.5) overallGrade = 'Exceptional';
-  else if (averageScore >= 3.5) overallGrade = 'A';
-  else if (averageScore >= 2.5) overallGrade = 'B';
-  else if (averageScore >= 1.5) overallGrade = 'C';
-  else overallGrade = 'Defisit';
+  let overallGrade = '-';
+  if (ratedAspects.length > 0) {
+    if (averageScore >= 4.5) overallGrade = 'Exceptional';
+    else if (averageScore >= 3.5) overallGrade = 'A';
+    else if (averageScore >= 2.5) overallGrade = 'B';
+    else if (averageScore >= 1.5) overallGrade = 'C';
+    else overallGrade = 'Defisit';
+  }
 
   // Pemilahan dimensi unggulan dan prioritas bimbingan yang mutually exclusive (tidak tumpang tindih)
-  const sortedDesc = [...aspects].sort((a, b) => b.score - a.score);
+  const sortedDesc = ratedAspects.sort((a, b) => b.score - a.score);
   
   // Ambil dimensi dengan skor tertinggi (maksimal 3 aspek teratas) sebagai keunggulan
   const candidateStrengths = sortedDesc.filter((a) => a.score >= 3.5);
@@ -699,7 +725,7 @@ const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
   const strengthIds = new Set(finalStrengths.map((s) => s.id));
 
   // Dimensi prioritas bimbingan diambil dari aspek tersisa (yang tidak ada di dimensi keunggulan), diurutkan dari skor terendah
-  const remainingForWeaknesses = [...aspects]
+  const remainingForWeaknesses = [...ratedAspects]
     .filter((a) => !strengthIds.has(a.id))
     .sort((a, b) => a.score - b.score);
   
@@ -709,15 +735,20 @@ const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
   const strongNames = finalStrengths.map((s) => s.nama).join(', ');
   const weakNames = finalWeaknesses.map((w) => w.nama).join(', ');
 
-  const strengthsSummary = `Berdasarkan peta radar capaian, kekuatan dominan Ananda ${siswa.nama} terletak pada dimensi ${strongNames}. Ananda menunjukkan antusiasme belajar yang tinggi, karakter kepemimpinan, kepedulian sosial, serta potensi keunikan diri yang patut diapresiasi dan dipertahankan.`;
+  const strengthsSummary = strongNames
+    ? `Berdasarkan peta radar capaian, kekuatan dominan Ananda ${siswa.nama} terletak pada dimensi ${strongNames}. Ananda menunjukkan antusiasme belajar yang tinggi, karakter kepemimpinan, kepedulian sosial, serta potensi keunikan diri yang patut diapresiasi dan dipertahankan.`
+    : 'Belum ada data capaian kekuatan yang tercatat.';
 
-  const weaknessesSummary = `Area perkembangan yang masih menjadi prioritas pendampingan teridentifikasi pada dimensi ${weakNames}. Diperlukan strategi bimbingan bertahap dari guru di kelas serta pembiasaan rutin yang hangat dari orang tua di rumah agar capaian pada aspek ini dapat bertumbuh optimal.`;
+  const weaknessesSummary = weakNames
+    ? `Area perkembangan yang masih menjadi prioritas pendampingan teridentifikasi pada dimensi ${weakNames}. Diperlukan strategi bimbingan bertahap dari guru di kelas serta pembiasaan rutin yang hangat dari orang tua di rumah agar capaian pada aspek ini dapat bertumbuh optimal.`
+    : 'Belum ada data untuk menentukan area pendampingan.';
 
   return {
     aspects,
     averageScore,
     averagePercentage,
     overallGrade,
+    hasData: ratedAspects.length > 0,
     topStrengths: finalStrengths,
     topWeaknesses: finalWeaknesses,
     strengthsSummary,
@@ -728,43 +759,43 @@ const getStudentSpiderAnalysis = (siswa: SiswaData): SpiderAnalysisResult => {
 interface QuarterTrendPoint {
   periode: string;
   label: string;
-  rerata: number;
-  kognitif: number;
-  afektif: number;
-  psikomotor: number;
-  sosial: number;
-  islamicLiteracy: number;
-  islamic_literacy: number;
-  bilingual: number;
-  talents: number;
-  experience: number;
-  inklusivitas: number;
-  [key: string]: string | number;
+  rerata: number | null;
+  kognitif: number | null;
+  afektif: number | null;
+  psikomotor: number | null;
+  sosial: number | null;
+  islamicLiteracy: number | null;
+  islamic_literacy: number | null;
+  bilingual: number | null;
+  talents: number | null;
+  experience: number | null;
+  inklusivitas: number | null;
+  [key: string]: string | number | null;
 }
 
 interface DimensionQuarterComparison {
   id: string;
   nama: string;
   singkatan: string;
-  triwulanLalu: number;
-  triwulanIni: number;
-  selisih: number;
-  persen: number;
+  triwulanLalu: number | null;
+  triwulanIni: number | null;
+  selisih: number | null;
+  persen: number | null;
   isNaik: boolean;
 }
 
 interface StudentQuarterTrendsResult {
   quarters: QuarterTrendPoint[];
-  overallDiff: number;
-  overallPercent: number;
-  isOverallUp: boolean;
-  prevRerata: number;
-  currentRerata: number;
-  highestGrowthDimension: DimensionQuarterComparison;
+  overallDiff: number | null;
+  overallPercent: number | null;
+  isOverallUp: boolean | null;
+  prevRerata: number | null;
+  currentRerata: number | null;
+  highestGrowthDimension: DimensionQuarterComparison | null;
   dimensionComparisons: DimensionQuarterComparison[];
 }
 
-const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult => {
+const getStudentQuarterTrends = (siswa: SiswaData, activeTriwulan: TriwulanKey): StudentQuarterTrendsResult => {
   const analysis = getStudentSpiderAnalysis(siswa);
   const currentScores: Record<string, number> = {};
   analysis.aspects.forEach((asp) => {
@@ -779,18 +810,18 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
 
   const triwulanMap = (siswa.allTriwulan || (siswa as any).triwulan) as Record<TriwulanKey, SiswaAssessmentRecord> | undefined;
 
-  // Fungsi pengambilan skor aspek dari data triwulan nyata siswa atau baseline deterministik
+  const activeStage = Number(activeTriwulan.slice(1));
   const getScoreForQuarterAspect = (
     qKey: 'T1' | 'T2' | 'T3' | 'T4',
     aspectId: string,
     stage: 1 | 2 | 3 | 4
-  ): number => {
+  ): number | null => {
     const qRecord = triwulanMap?.[qKey];
     if (qRecord) {
       // Periksa overallGrades manual jika tersedia
       if (qRecord.overallGrades && qRecord.overallGrades[aspectId]) {
         const og = qRecord.overallGrades[aspectId];
-        if (GRADE_WEIGHTS[og]) return GRADE_WEIGHTS[og];
+        if (Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, og)) return GRADE_WEIGHTS[og];
       }
       
       const aspMeta = ASPEK_LIST.find((a) => a.id === aspectId || (aspectId === 'islamic_literacy' && a.id === 'islamicLiteracy'));
@@ -803,7 +834,7 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
           const scores: number[] = [];
           aspMeta.indikatorList.forEach((ind) => {
             const val = sec[ind.key];
-            if (val && GRADE_WEIGHTS[val]) {
+            if (val && Object.prototype.hasOwnProperty.call(GRADE_WEIGHTS, val)) {
               scores.push(GRADE_WEIGHTS[val]);
             }
           });
@@ -815,19 +846,12 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
       }
     }
 
-    // Jika stage 4 (triwulan saat ini), gunakan skor analisis terkini
-    if (stage === 4) {
+    if (stage === activeStage) {
       const cur = currentScores[aspectId] ?? (aspectId === 'islamic_literacy' ? currentScores['islamicLiteracy'] : currentScores['islamic_literacy']);
-      return cur !== undefined ? cur : 3.5;
+      return cur > 0 ? cur : null;
     }
 
-    // Fallback kurva deterministik jika data periode lalu belum diinput
-    const cur = currentScores[aspectId] ?? (aspectId === 'islamic_literacy' ? currentScores['islamicLiteracy'] : currentScores['islamic_literacy']) ?? 3.5;
-    const seed = (siswa.no * 7 + aspectId.charCodeAt(0) * 3 + stage * 11) % 100;
-    const growthGap = stage === 3 ? 0.22 : stage === 2 ? 0.44 : 0.68;
-    const variation = (seed / 100) * 0.16 - 0.08;
-    const prev = Math.max(1.8, Math.min(4.9, cur - growthGap + variation));
-    return Number(prev.toFixed(2));
+    return null;
   };
 
   const t1_il = getScoreForQuarterAspect('T1', 'islamicLiteracy', 1);
@@ -839,7 +863,7 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
     {
       periode: 'TW 1',
       label: 'Triwulan I (Awal)',
-      rerata: 0,
+      rerata: null,
       kognitif: getScoreForQuarterAspect('T1', 'kognitif', 1),
       afektif: getScoreForQuarterAspect('T1', 'afektif', 1),
       psikomotor: getScoreForQuarterAspect('T1', 'psikomotor', 1),
@@ -854,7 +878,7 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
     {
       periode: 'TW 2',
       label: 'Triwulan II (Pertengahan)',
-      rerata: 0,
+      rerata: null,
       kognitif: getScoreForQuarterAspect('T2', 'kognitif', 2),
       afektif: getScoreForQuarterAspect('T2', 'afektif', 2),
       psikomotor: getScoreForQuarterAspect('T2', 'psikomotor', 2),
@@ -868,8 +892,8 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
     },
     {
       periode: 'TW 3',
-      label: 'Triwulan III (Sebelumnya)',
-      rerata: 0,
+      label: 'Triwulan III',
+      rerata: null,
       kognitif: getScoreForQuarterAspect('T3', 'kognitif', 3),
       afektif: getScoreForQuarterAspect('T3', 'afektif', 3),
       psikomotor: getScoreForQuarterAspect('T3', 'psikomotor', 3),
@@ -883,8 +907,8 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
     },
     {
       periode: 'TW 4',
-      label: 'Triwulan IV (Saat Ini)',
-      rerata: analysis.averageScore,
+      label: 'Triwulan IV',
+      rerata: null,
       kognitif: getScoreForQuarterAspect('T4', 'kognitif', 4),
       afektif: getScoreForQuarterAspect('T4', 'afektif', 4),
       psikomotor: getScoreForQuarterAspect('T4', 'psikomotor', 4),
@@ -898,55 +922,58 @@ const getStudentQuarterTrends = (siswa: SiswaData): StudentQuarterTrendsResult =
     }
   ];
 
-  // Hitung rerata komprehensif 9 dimensi untuk TW 1, 2, 3
-  quarters[0].rerata = Number(
-    ((quarters[0].kognitif + quarters[0].afektif + quarters[0].psikomotor + quarters[0].sosial + quarters[0].islamicLiteracy + quarters[0].bilingual + quarters[0].talents + quarters[0].experience + quarters[0].inklusivitas) / 9).toFixed(2)
-  );
-  quarters[1].rerata = Number(
-    ((quarters[1].kognitif + quarters[1].afektif + quarters[1].psikomotor + quarters[1].sosial + quarters[1].islamicLiteracy + quarters[1].bilingual + quarters[1].talents + quarters[1].experience + quarters[1].inklusivitas) / 9).toFixed(2)
-  );
-  quarters[2].rerata = Number(
-    ((quarters[2].kognitif + quarters[2].afektif + quarters[2].psikomotor + quarters[2].sosial + quarters[2].islamicLiteracy + quarters[2].bilingual + quarters[2].talents + quarters[2].experience + quarters[2].inklusivitas) / 9).toFixed(2)
-  );
+  quarters.forEach((quarter) => {
+    const scores = ASPEK_LIST
+      .map((aspect) => quarter[aspect.id])
+      .filter((score): score is number => typeof score === 'number' && Number.isFinite(score));
+    quarter.rerata = scores.length > 0
+      ? Number((scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2))
+      : null;
+  });
 
-  const prevQuarter = quarters[2];
-  const currentQuarter = quarters[3];
-  const overallDiff = Number((currentQuarter.rerata - prevQuarter.rerata).toFixed(2));
-  const overallPercent = Number(((overallDiff / prevQuarter.rerata) * 100).toFixed(1));
+  const currentQuarterIndex = activeStage - 1;
+  const prevQuarter = currentQuarterIndex > 0 ? quarters[currentQuarterIndex - 1] : null;
+  const currentQuarter = quarters[currentQuarterIndex];
+  const hasOverallComparison = Boolean(prevQuarter?.rerata && currentQuarter?.rerata !== null);
+  const overallDiff = hasOverallComparison
+    ? Number((currentQuarter.rerata! - prevQuarter!.rerata!).toFixed(2))
+    : null;
+  const overallPercent = hasOverallComparison && prevQuarter?.rerata
+    ? Number(((overallDiff! / prevQuarter.rerata) * 100).toFixed(1))
+    : null;
 
   // Komparasi seluruh 9 dimensi
   const dimensionComparisons: DimensionQuarterComparison[] = analysis.aspects.map((asp) => {
-    const prevRaw = prevQuarter[asp.id] !== undefined
-      ? prevQuarter[asp.id]
-      : (asp.id === 'islamicLiteracy' ? prevQuarter.islamic_literacy : prevQuarter[asp.id]);
-    const currRaw = currentQuarter[asp.id] !== undefined
-      ? currentQuarter[asp.id]
-      : (asp.id === 'islamicLiteracy' ? currentQuarter.islamic_literacy : currentQuarter[asp.id]);
-    const prev = Number(prevRaw) || 0;
-    const curr = Number(currRaw) || 0;
-    const diff = Number((curr - prev).toFixed(2));
-    const pct = prev > 0 ? Number(((diff / prev) * 100).toFixed(1)) : 0;
+    const prevRaw = prevQuarter?.[asp.id];
+    const currRaw = currentQuarter[asp.id];
+    const prev = typeof prevRaw === 'number' ? prevRaw : null;
+    const curr = typeof currRaw === 'number' ? currRaw : null;
+    const hasScores = typeof prev === 'number' && typeof curr === 'number';
+    const diff = hasScores ? Number((curr - prev).toFixed(2)) : null;
+    const pct = hasScores && prev > 0 && diff !== null ? Number(((diff / prev) * 100).toFixed(1)) : null;
     return {
       id: asp.id,
       nama: asp.nama,
       singkatan: asp.nama.length > 10 ? asp.nama.substring(0, 9) + '..' : asp.nama,
-      triwulanLalu: prev,
-      triwulanIni: curr,
+      triwulanLalu: prev ?? null,
+      triwulanIni: curr ?? null,
       selisih: diff,
       persen: pct,
-      isNaik: diff >= 0
+      isNaik: diff !== null && diff >= 0
     };
   });
 
-  const sortedByGrowth = [...dimensionComparisons].sort((a, b) => b.selisih - a.selisih);
-  const highestGrowthDimension = sortedByGrowth[0] || dimensionComparisons[0];
+  const sortedByGrowth = dimensionComparisons
+    .filter((dimension): dimension is DimensionQuarterComparison & { selisih: number } => dimension.selisih !== null)
+    .sort((a, b) => b.selisih - a.selisih);
+  const highestGrowthDimension = sortedByGrowth[0] || null;
 
   return {
     quarters,
     overallDiff,
     overallPercent,
-    isOverallUp: overallDiff >= 0,
-    prevRerata: prevQuarter.rerata,
+    isOverallUp: overallDiff === null ? null : overallDiff >= 0,
+    prevRerata: prevQuarter?.rerata ?? null,
     currentRerata: currentQuarter.rerata,
     highestGrowthDimension,
     dimensionComparisons
@@ -1423,7 +1450,7 @@ export default function App() {
     const studentsRef = ref(db, 'students');
     const unsubscribe = onValue(
       studentsRef,
-      (snapshot: any) => {
+      (snapshot) => {
         setFirebaseConnected(true);
         if (snapshot.exists()) {
           const val = snapshot.val();
@@ -1438,20 +1465,18 @@ export default function App() {
           }
         } else {
           // Inisialisasi awal ke Firebase jika masih kosong
-          set(studentsRef, INITIAL_MASTER_STUDENTS).catch((err: any) =>
+          set(studentsRef, INITIAL_MASTER_STUDENTS).catch((err: unknown) =>
             console.warn('Firebase initial students set error:', err)
           );
         }
       },
-      (error: any) => {
+      (error) => {
         console.warn('Firebase /students onValue error:', error);
         setFirebaseConnected(false);
       }
     );
 
-    return () => {
-      off(studentsRef);
-    };
+    return unsubscribe;
   }, []);
 
   // 2. SINKRONISASI REALTIME FIREBASE: /teachers
@@ -1459,7 +1484,7 @@ export default function App() {
     const teachersRef = ref(db, 'teachers');
     const unsubscribe = onValue(
       teachersRef,
-      (snapshot: any) => {
+      (snapshot) => {
         setFirebaseConnected(true);
         if (snapshot.exists()) {
           const val = snapshot.val();
@@ -1482,19 +1507,17 @@ export default function App() {
               niy: '89070107222028'
             }
           };
-          set(teachersRef, defaultTeachers).catch((err: any) =>
+          set(teachersRef, defaultTeachers).catch((err: unknown) =>
             console.warn('Firebase initial teachers error:', err)
           );
         }
       },
-      (error: any) => {
+      (error) => {
         console.warn('Firebase /teachers onValue error:', error);
       }
     );
 
-    return () => {
-      off(teachersRef);
-    };
+    return unsubscribe;
   }, []);
 
   // 3. SINKRONISASI REALTIME FIREBASE: /app_settings
@@ -1502,7 +1525,7 @@ export default function App() {
     const settingsRef = ref(db, 'app_settings');
     const unsubscribe = onValue(
       settingsRef,
-      (snapshot: any) => {
+      (snapshot) => {
         setFirebaseConnected(true);
         if (snapshot.exists()) {
           const val = snapshot.val();
@@ -1533,14 +1556,12 @@ export default function App() {
           }
         }
       },
-      (error: any) => {
+      (error) => {
         console.warn('Firebase /app_settings onValue error:', error);
       }
     );
 
-    return () => {
-      off(settingsRef);
-    };
+    return unsubscribe;
   }, []);
 
   // Simpan user sesi ke localStorage
@@ -3021,7 +3042,7 @@ export default function App() {
     `).join('');
 
     // Hitung Prediksi Potensi Capaian Triwulan Berikutnya
-    const studentTrends = getStudentQuarterTrends(student);
+    const studentTrends = getStudentQuarterTrends(student, activeTriwulan);
     const prediction = predictNextQuarterAchievement(student, activeTriwulan, studentTrends.quarters);
 
     // Proyeksi Polygon Points
@@ -3620,7 +3641,7 @@ export default function App() {
           {/* 3. AREA KONTEN MASING-MASING HALAMAN                      */}
           {/* ========================================================= */}
           <main className="app-main p-3 sm:p-6 flex-1 min-w-0 overflow-y-auto bg-[#ececec]">
-          {masterStudents.length === 0 && currentPage !== 'database' ? (
+          {dataSiswa.length === 0 && currentPage !== 'database' ? (
             <div className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <Database className="mx-auto mb-3 h-8 w-8 text-slate-400" />
               <h2 className="text-lg font-bold text-slate-800">Database siswa kosong</h2>
@@ -3965,7 +3986,7 @@ export default function App() {
                           </div>
 
                           <div className="text-[11px] text-slate-700 space-y-0.5 pt-1">
-                            {prevComparison.highestGrowthAspect && (
+                            {prevComparison.highestGrowthAspect?.hasDataA && prevComparison.highestGrowthAspect.hasDataB && (
                               <div className="flex items-center justify-between font-bold text-emerald-800 truncate">
                                 <span className="truncate">{prevComparison.highestGrowthAspect.nama}</span>
                                 <span className="shrink-0 font-mono text-[10px] bg-emerald-100 px-1.5 rounded">
@@ -3973,7 +3994,7 @@ export default function App() {
                                 </span>
                               </div>
                             )}
-                            {prevComparison.biggestDropAspect && prevComparison.biggestDropAspect.selisih < 0 && (
+                            {prevComparison.biggestDropAspect?.hasDataA && prevComparison.biggestDropAspect.hasDataB && prevComparison.biggestDropAspect.selisih < 0 && (
                               <div className="flex items-center justify-between font-bold text-rose-800 truncate">
                                 <span className="truncate">{prevComparison.biggestDropAspect.nama}</span>
                                 <span className="shrink-0 font-mono text-[10px] bg-rose-100 px-1.5 rounded">
@@ -4270,7 +4291,7 @@ export default function App() {
                         </div>
 
                         {/* 2. Aspek Kenaikan Terbesar */}
-                        {prevComparison?.highestGrowthAspect && prevComparison.highestGrowthAspect.selisih > 0 && (
+                        {prevComparison?.highestGrowthAspect?.hasDataA && prevComparison.highestGrowthAspect.hasDataB && prevComparison.highestGrowthAspect.selisih > 0 && (
                           <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5">
                             <span className="p-1 rounded bg-emerald-200 text-emerald-900 font-bold text-xs shrink-0">📈</span>
                             <div>
@@ -4285,7 +4306,7 @@ export default function App() {
                         )}
 
                         {/* 3. Aspek Penurunan Terbesar */}
-                        {prevComparison?.biggestDropAspect && prevComparison.biggestDropAspect.selisih < 0 && (
+                        {prevComparison?.biggestDropAspect?.hasDataA && prevComparison.biggestDropAspect.hasDataB && prevComparison.biggestDropAspect.selisih < 0 && (
                           <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
                             <span className="p-1 rounded bg-amber-200 text-amber-900 font-bold text-xs shrink-0">⚠️</span>
                             <div>
@@ -6607,7 +6628,7 @@ export default function App() {
                   {/* SPIDER CHART & ASPECT INSPECTOR */}
                   {(() => {
                     const spiderAnalysis = getStudentSpiderAnalysis(selectedStudent);
-                    const trendData = getStudentQuarterTrends(selectedStudent);
+                    const trendData = getStudentQuarterTrends(selectedStudent, activeTriwulan);
                     const predictionData = predictNextQuarterAchievement(selectedStudent, activeTriwulan, trendData.quarters);
                     const activeAspectId = selectedSpiderAspect || spiderAnalysis.aspects[0].id;
                     const currentAspect = spiderAnalysis.aspects.find(a => a.id === activeAspectId) || spiderAnalysis.aspects[0];
@@ -7070,7 +7091,7 @@ export default function App() {
                   {/* BERDASARKAN TREN HISTORIS SPIDER CHART                   */}
                   {/* ======================================================== */}
                   {(() => {
-                    const trendData = getStudentQuarterTrends(selectedStudent);
+                    const trendData = getStudentQuarterTrends(selectedStudent, activeTriwulan);
                     const predictionData = predictNextQuarterAchievement(selectedStudent, activeTriwulan, trendData.quarters);
 
                     return (
@@ -7106,7 +7127,7 @@ export default function App() {
                           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
                             <span className="text-[10px] font-bold text-slate-500 uppercase block">Capaian Terkini ({predictionData.currentQuarterLabel.split(' ')[0]})</span>
                             <div className="text-xl font-black text-slate-700 mt-0.5">
-                              {predictionData.currentAverageScore} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
+                              {predictionData.currentOverallGrade === '-' ? '—' : predictionData.currentAverageScore} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
                             </div>
                             <span className="text-[10px] text-slate-600 font-semibold block">
                               Predikat: <strong className="text-slate-800">{predictionData.currentOverallGrade}</strong>
@@ -7116,7 +7137,7 @@ export default function App() {
                           <div className="bg-white p-3 rounded-xl border-2 border-indigo-400 shadow-2xs">
                             <span className="text-[10px] font-bold text-indigo-700 uppercase block">Estimasi Skor Berikutnya</span>
                             <div className="text-xl font-black text-indigo-700 mt-0.5">
-                              {predictionData.predictedAverageScore} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
+                              {predictionData.predictedOverallGrade === '-' ? '—' : predictionData.predictedAverageScore} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
                             </div>
                             <span className="text-[10px] text-indigo-900 font-bold block">
                               Prospek Predikat: <strong className="text-indigo-800">{predictionData.predictedOverallGrade}</strong>
@@ -7244,10 +7265,10 @@ export default function App() {
                                     <td className="p-2 text-center font-bold text-slate-600 border-r border-slate-200">{asp.no}</td>
                                     <td className="p-2 font-black text-slate-900 uppercase border-r border-slate-200">{asp.nama}</td>
                                     <td className="p-2 text-center font-bold text-slate-700 border-r border-slate-200">
-                                      {asp.currentScore} ({asp.currentGrade})
+                                      {asp.hasData ? `${asp.currentScore} (${asp.currentGrade})` : 'Belum ada data'}
                                     </td>
                                     <td className="p-2 text-center font-black text-indigo-700 bg-indigo-50/60 border-r border-slate-200">
-                                      {asp.predictedScore} <span className="text-[10px] text-slate-500">({asp.predictedGrade})</span>
+                                      {asp.hasData ? `${asp.predictedScore} (${asp.predictedGrade})` : '—'}
                                     </td>
                                     <td className={`p-2 text-center font-black border-r border-slate-200 ${
                                       asp.scoreDiff > 0 ? 'text-emerald-700' : asp.scoreDiff < 0 ? 'text-rose-700' : 'text-slate-600'
@@ -7256,6 +7277,9 @@ export default function App() {
                                     </td>
                                     <td className="p-2 text-center border-r border-slate-200">
                                       <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                        !asp.hasData
+                                          ? 'bg-slate-100 text-slate-600 border border-slate-300'
+                                          :
                                         asp.status === 'MELOJIT'
                                           ? 'bg-purple-100 text-purple-800 border border-purple-300'
                                           : asp.status === 'MENINGKAT'
@@ -7264,7 +7288,7 @@ export default function App() {
                                           ? 'bg-blue-100 text-blue-800 border border-blue-300'
                                           : 'bg-amber-100 text-amber-800 border border-amber-300'
                                       }`}>
-                                        {asp.status === 'MELOJIT' ? '🚀 Melonjak' : asp.status === 'MENINGKAT' ? '📈 Meningkat' : asp.status === 'STABIL' ? '⚖️ Stabil' : '⚠️ Bimbingan'}
+                                        {!asp.hasData ? 'Belum Dinilai' : asp.status === 'MELOJIT' ? '🚀 Melonjak' : asp.status === 'MENINGKAT' ? '📈 Meningkat' : asp.status === 'STABIL' ? '⚖️ Stabil' : '⚠️ Bimbingan'}
                                       </span>
                                     </td>
                                     <td className="p-2 text-slate-700 text-[11px] leading-relaxed">
@@ -7310,7 +7334,7 @@ export default function App() {
                   {/* PROGRES PERKEMBANGAN DARI TRIWULAN SEBELUMNYA           */}
                   {/* ======================================================== */}
                   {(() => {
-                    const trendData = getStudentQuarterTrends(selectedStudent);
+                    const trendData = getStudentQuarterTrends(selectedStudent, activeTriwulan);
                     const selectedAspectMeta = ASPEK_LIST.find((a) => a.id === selectedTrendAspectId) || ASPEK_LIST[0];
 
                     // Prepare single aspect quarterly trend data
@@ -7318,7 +7342,7 @@ export default function App() {
                       const rawScore = q[selectedTrendAspectId] !== undefined
                         ? q[selectedTrendAspectId]
                         : (selectedTrendAspectId === 'islamicLiteracy' ? q.islamic_literacy : (selectedTrendAspectId === 'islamic_literacy' ? q.islamicLiteracy : undefined));
-                      const scoreNum = typeof rawScore === 'number' ? rawScore : (Number(rawScore) || 0);
+                      const scoreNum = typeof rawScore === 'number' && Number.isFinite(rawScore) ? rawScore : null;
                       return {
                         periode: q.periode,
                         label: q.label,
@@ -7367,7 +7391,7 @@ export default function App() {
                                   ? 'bg-teal-700 text-white shadow-xs'
                                   : 'text-slate-700 hover:bg-slate-100'
                               }`}
-                              title="Tampilkan perbandingan batang 9 dimensi TW 3 vs TW 4"
+                              title={`Tampilkan perbandingan 9 dimensi TW ${Math.max(1, Number(activeTriwulan.slice(1)) - 1)} vs TW ${activeTriwulan.slice(1)}`}
                             >
                               <BarChart3 className="w-3.5 h-3.5" />
                               <span>Komparasi 9 Dimensi</span>
@@ -7391,48 +7415,54 @@ export default function App() {
                         {/* Kartu Ringkasan Progres Nilai */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                           <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase block">Triwulan III (Lalu)</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                              {Number(activeTriwulan.slice(1)) > 1 ? `Triwulan ${Number(activeTriwulan.slice(1)) - 1} (Lalu)` : 'Periode Sebelumnya'}
+                            </span>
                             <div className="text-lg font-black text-slate-700 mt-0.5">
-                              {trendData.prevRerata} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
+                              {trendData.prevRerata ?? '—'} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
                             </div>
                             <span className="text-[10px] text-slate-500 font-semibold block">Periode sebelumnya</span>
                           </div>
 
                           <div className="bg-white p-2.5 rounded-xl border border-teal-300 shadow-2xs">
-                            <span className="text-[10px] font-bold text-teal-700 uppercase block">Triwulan IV (Saat Ini)</span>
+                            <span className="text-[10px] font-bold text-teal-700 uppercase block">Triwulan {activeTriwulan.slice(1)} (Saat Ini)</span>
                             <div className="text-lg font-black text-teal-700 mt-0.5">
-                              {trendData.currentRerata} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
+                              {trendData.currentRerata ?? '—'} <span className="text-[10px] font-normal text-slate-500">/ 5.0</span>
                             </div>
                             <span className="text-[10px] text-teal-600 font-semibold block">Capaian terkini</span>
                           </div>
 
                           <div className={`p-2.5 rounded-xl border shadow-2xs ${
-                            trendData.isOverallUp
+                            trendData.isOverallUp === true
                               ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-                              : 'bg-rose-50 border-rose-300 text-rose-950'
+                              : trendData.isOverallUp === false
+                                ? 'bg-rose-50 border-rose-300 text-rose-950'
+                                : 'bg-slate-50 border-slate-300 text-slate-700'
                           }`}>
                             <span className="text-[10px] font-bold uppercase block">
-                              {trendData.isOverallUp ? 'Pertumbuhan (Delta)' : 'Penurunan'}
+                              {trendData.isOverallUp === null ? 'Belum dapat dibandingkan' : trendData.isOverallUp ? 'Pertumbuhan (Delta)' : 'Penurunan'}
                             </span>
                             <div className={`text-lg font-black mt-0.5 flex items-center gap-1 ${
-                              trendData.isOverallUp ? 'text-emerald-700' : 'text-rose-700'
+                              trendData.isOverallUp === true ? 'text-emerald-700' : trendData.isOverallUp === false ? 'text-rose-700' : 'text-slate-700'
                             }`}>
-                              {trendData.isOverallUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                              <span>{trendData.isOverallUp ? `+${trendData.overallDiff}` : trendData.overallDiff}</span>
-                              <span className="text-xs font-bold">({trendData.overallPercent > 0 ? `+${trendData.overallPercent}` : trendData.overallPercent}%)</span>
+                              {trendData.isOverallUp === true ? <TrendingUp className="w-4 h-4" /> : trendData.isOverallUp === false ? <TrendingDown className="w-4 h-4" /> : null}
+                              <span>{trendData.overallDiff === null ? '—' : trendData.isOverallUp ? `+${trendData.overallDiff}` : trendData.overallDiff}</span>
+                              <span className="text-xs font-bold">({trendData.overallPercent === null ? '—' : trendData.overallPercent > 0 ? `+${trendData.overallPercent}` : trendData.overallPercent}%)</span>
                             </div>
                             <span className="text-[10px] font-medium block">
-                              {trendData.isOverallUp ? 'Tren meningkat positif' : 'Perlu stimulasi'}
+                              {trendData.isOverallUp === null ? 'Data penilaian belum lengkap' : trendData.isOverallUp ? 'Tren meningkat positif' : 'Perlu stimulasi'}
                             </span>
                           </div>
 
                           <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
                             <span className="text-[10px] font-bold text-slate-500 uppercase block">Lompatan Tertinggi</span>
                             <div className="text-xs font-black text-indigo-900 truncate mt-1">
-                              {trendData.highestGrowthDimension.nama}
+                              {trendData.highestGrowthDimension?.nama ?? 'Belum tersedia'}
                             </div>
                             <span className="text-[10px] text-emerald-600 font-black block">
-                              +{trendData.highestGrowthDimension.selisih} poin (+{trendData.highestGrowthDimension.persen}%)
+                              {trendData.highestGrowthDimension?.selisih !== null && trendData.highestGrowthDimension?.selisih !== undefined
+                                ? `${trendData.highestGrowthDimension.selisih >= 0 ? '+' : ''}${trendData.highestGrowthDimension.selisih} poin (${trendData.highestGrowthDimension.persen ?? 0}%)`
+                                : 'Belum ada data pembanding'}
                             </span>
                           </div>
                         </div>
@@ -7664,11 +7694,16 @@ export default function App() {
                             <span className="font-bold text-slate-900">Catatan Refleksi Progres:</span>
                             <p className="leading-relaxed">
                               Ananda <strong className="text-slate-900">{selectedStudent.nama}</strong> mengalami perubahan rerata sebesar{' '}
-                              <strong className={trendData.isOverallUp ? 'text-emerald-700' : 'text-rose-700'}>
-                                {trendData.isOverallUp ? `+${trendData.overallDiff}` : trendData.overallDiff} poin ({trendData.overallPercent > 0 ? `+${trendData.overallPercent}` : trendData.overallPercent}%)
+                              <strong className={trendData.isOverallUp === true ? 'text-emerald-700' : trendData.isOverallUp === false ? 'text-rose-700' : 'text-slate-700'}>
+                                {trendData.overallDiff === null
+                                ? 'belum dapat dibandingkan karena data periode belum lengkap'
+                                : `${trendData.isOverallUp ? '+' : ''}${trendData.overallDiff} poin (${trendData.overallPercent === null ? '—' : `${trendData.overallPercent > 0 ? '+' : ''}${trendData.overallPercent}%`})`}
                               </strong>{' '}
-                              dibandingkan evaluasi Triwulan sebelumnya. Peningkatan paling menonjol tercatat pada aspek{' '}
-                              <strong className="text-teal-800">{trendData.highestGrowthDimension.nama}</strong> dengan kenaikan +{trendData.highestGrowthDimension.selisih} poin.
+                              {trendData.overallDiff === null ? '' : 'dibandingkan evaluasi Triwulan sebelumnya.'} Peningkatan paling menonjol tercatat pada aspek{' '}
+                              <strong className="text-teal-800">{trendData.highestGrowthDimension?.nama ?? 'yang telah memiliki data pembanding'}</strong>
+                              {trendData.highestGrowthDimension?.selisih !== null && trendData.highestGrowthDimension?.selisih !== undefined
+                                ? ` dengan kenaikan ${trendData.highestGrowthDimension.selisih >= 0 ? '+' : ''}${trendData.highestGrowthDimension.selisih} poin.`
+                                : '.'}
                             </p>
                           </div>
                         </div>

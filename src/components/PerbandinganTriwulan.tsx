@@ -96,6 +96,21 @@ export const PerbandinganTriwulan: React.FC<PerbandinganTriwulanProps> = ({
     setPeriodB(b);
   };
 
+  if (!currentStudent) {
+    return (
+      <div className="rounded-xl border-2 border-slate-300 bg-white p-6 text-center">
+        <p className="font-bold text-slate-800">Belum ada data siswa untuk dibandingkan.</p>
+        <button
+          type="button"
+          onClick={onNavigateHome}
+          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+        >
+          Kembali
+        </button>
+      </div>
+    );
+  }
+
   // Calculations
   const comparison = compareTwoQuarters(currentStudent, periodA, periodB);
   const allQuarters = getAllQuartersComparison(currentStudent);
@@ -445,7 +460,8 @@ export const PerbandinganTriwulan: React.FC<PerbandinganTriwulanProps> = ({
                 </span>
               </div>
               <span className="text-[10px] font-medium block">
-                Dari {comparison.rerataA} ke {comparison.rerataB} (skala 5.0)
+                {comparison.aspects.some((aspect) => aspect.hasDataA) ? comparison.rerataA : '—'} ke{' '}
+                {comparison.aspects.some((aspect) => aspect.hasDataB) ? comparison.rerataB : '—'} (skala 5.0)
               </span>
             </div>
           </div>
@@ -460,13 +476,19 @@ export const PerbandinganTriwulan: React.FC<PerbandinganTriwulanProps> = ({
                   ASPEK DENGAN KENAIKAN TERBESAR:
                 </span>
                 <div className="font-black text-slate-900 text-sm">
-                  {comparison.highestGrowthAspect.nama}{' '}
-                  <span className="text-emerald-700 font-extrabold">
-                    ({comparison.highestGrowthAspect.selisih >= 0 ? `+${comparison.highestGrowthAspect.selisih}` : comparison.highestGrowthAspect.selisih})
-                  </span>
+                  {comparison.aspects.some((aspect) => aspect.hasDataA && aspect.hasDataB)
+                    ? <>
+                        {comparison.highestGrowthAspect.nama}{' '}
+                        <span className="text-emerald-700 font-extrabold">
+                          ({comparison.highestGrowthAspect.selisih >= 0 ? `+${comparison.highestGrowthAspect.selisih}` : comparison.highestGrowthAspect.selisih})
+                        </span>
+                      </>
+                    : 'Belum ada data yang dapat dibandingkan'}
                 </div>
                 <p className="text-[11px] text-slate-600">
-                  Indikator terkuat: <strong>{comparison.highestGrowthIndicator.nama}</strong> ({comparison.highestGrowthIndicator.selisih >= 0 ? `+${comparison.highestGrowthIndicator.selisih}` : comparison.highestGrowthIndicator.selisih})
+                  {comparison.highestGrowthIndicator.scoreA > 0 && comparison.highestGrowthIndicator.scoreB > 0
+                    ? <>Indikator terkuat: <strong>{comparison.highestGrowthIndicator.nama}</strong> ({comparison.highestGrowthIndicator.selisih >= 0 ? `+${comparison.highestGrowthIndicator.selisih}` : comparison.highestGrowthIndicator.selisih})</>
+                    : 'Belum ada indikator yang dapat dibandingkan.'}
                 </p>
               </div>
             </div>
@@ -479,13 +501,19 @@ export const PerbandinganTriwulan: React.FC<PerbandinganTriwulanProps> = ({
                   ASPEK DENGAN PENURUNAN TERBESAR / FOKUS BIMBINGAN:
                 </span>
                 <div className="font-black text-slate-900 text-sm">
-                  {comparison.biggestDropAspect.nama}{' '}
-                  <span className={comparison.biggestDropAspect.selisih < 0 ? 'text-rose-700 font-extrabold' : 'text-slate-700 font-extrabold'}>
-                    ({comparison.biggestDropAspect.selisih >= 0 ? `+${comparison.biggestDropAspect.selisih}` : comparison.biggestDropAspect.selisih})
-                  </span>
+                  {comparison.aspects.some((aspect) => aspect.hasDataA && aspect.hasDataB)
+                    ? <>
+                        {comparison.biggestDropAspect.nama}{' '}
+                        <span className={comparison.biggestDropAspect.selisih < 0 ? 'text-rose-700 font-extrabold' : 'text-slate-700 font-extrabold'}>
+                          ({comparison.biggestDropAspect.selisih >= 0 ? `+${comparison.biggestDropAspect.selisih}` : comparison.biggestDropAspect.selisih})
+                        </span>
+                      </>
+                    : 'Belum ada data yang dapat dibandingkan'}
                 </div>
                 <p className="text-[11px] text-slate-600">
-                  Indikator prioritas pendampingan: <strong>{comparison.biggestDropIndicator.nama}</strong> ({comparison.biggestDropIndicator.selisih >= 0 ? `+${comparison.biggestDropIndicator.selisih}` : comparison.biggestDropIndicator.selisih})
+                  {comparison.biggestDropIndicator.scoreA > 0 && comparison.biggestDropIndicator.scoreB > 0
+                    ? <>Indikator prioritas pendampingan: <strong>{comparison.biggestDropIndicator.nama}</strong> ({comparison.biggestDropIndicator.selisih >= 0 ? `+${comparison.biggestDropIndicator.selisih}` : comparison.biggestDropIndicator.selisih})</>
+                    : 'Belum ada indikator yang dapat dibandingkan.'}
                 </p>
               </div>
             </div>

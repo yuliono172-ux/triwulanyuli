@@ -1,31 +1,61 @@
-import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getApp, getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import {
   getDatabase,
   ref,
   set,
   get,
   onValue,
-  off,
   update,
   remove
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
-export const firebaseConfig = {
-  apiKey: "AIzaSyDNGOS06tQ_63_UAHQSJj0uBxpIKWBbnZI",
-  authDomain: "triwulan-a6d54.firebaseapp.com",
-  databaseURL: "https://triwulan-a6d54-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "triwulan-a6d54",
-  storageBucket: "triwulan-a6d54.firebasestorage.app",
-  messagingSenderId: "635789273159",
-  appId: "1:635789273159:web:4a69a70f6825f7a482a962",
-  measurementId: "G-QN0N308TMZ"
+interface FirebaseClientOptions {
+  apiKey: string;
+  authDomain: string;
+  databaseURL: string;
+  projectId: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId: string;
+  measurementId?: string;
+}
+
+const firebaseConfig: FirebaseClientOptions = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || undefined,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || undefined,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined
 };
 
-// Initialize Firebase App
+const requiredFirebaseConfig: {
+  key: keyof FirebaseClientOptions;
+  envName: string;
+}[] = [
+  { key: 'apiKey', envName: 'VITE_FIREBASE_API_KEY' },
+  { key: 'authDomain', envName: 'VITE_FIREBASE_AUTH_DOMAIN' },
+  { key: 'databaseURL', envName: 'VITE_FIREBASE_DATABASE_URL' },
+  { key: 'projectId', envName: 'VITE_FIREBASE_PROJECT_ID' },
+  { key: 'appId', envName: 'VITE_FIREBASE_APP_ID' }
+];
+const missingFirebaseConfig = requiredFirebaseConfig
+  .filter(({ key }) => !firebaseConfig[key])
+  .map(({ envName }) => envName);
+
+if (missingFirebaseConfig.length > 0) {
+  throw new Error(
+    `Firebase configuration is missing: ${missingFirebaseConfig.join(', ')}. ` +
+    'Copy .env.example to .env.local and provide the Firebase web app settings.'
+  );
+}
+
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getDatabase(app);
 
-export { ref, set, get, onValue, off, update, remove };
+export { ref, set, get, onValue, update, remove };
 
 export interface TeacherRecord {
   id: string;
