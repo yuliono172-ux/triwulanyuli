@@ -1666,7 +1666,9 @@ export default function App() {
         tempatRaport: metaRapor.tempatRaport,
         tanggalRaport: metaRapor.tanggalRaport,
         kepalaSekolahNama: metaRapor.kepalaSekolah.nama,
-        kepalaSekolahNiy: metaRapor.kepalaSekolah.niy
+        kepalaSekolahNiy: metaRapor.kepalaSekolah.niy,
+        guruKelasNama: metaRapor.guruKelas.nama,
+        guruKelasNiy: metaRapor.guruKelas.niy
       };
       await set(settingsRef, payload);
       toastSuccess(
@@ -5483,6 +5485,48 @@ export default function App() {
                     </div>
                   </div>
 
+                  <section className="rounded-xl border-2 border-blue-300 bg-blue-50 p-3 space-y-2" aria-label="Pratinjau laporan">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-xs font-black uppercase tracking-wide text-blue-950">Pratinjau hasil edit</h3>
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">Langsung</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-blue-900">
+                      Perubahan di atas langsung terlihat di sini dan pada lembar rapor resmi.
+                    </p>
+                    <div className="mx-auto w-full max-w-[360px] rounded-md border border-slate-300 bg-white p-3 text-center text-slate-900 shadow-sm">
+                      {showKopSekolah && (
+                        uploadedKopImage ? (
+                          <img src={uploadedKopImage} alt="Pratinjau kop sekolah" className="mb-2 max-h-14 w-full object-contain" />
+                        ) : (
+                          <div className="mb-2 border-b-2 border-double border-slate-800 pb-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wide">{metaRapor.kopSekolah.instansi}</p>
+                            <p className="mt-0.5 text-xs font-black uppercase leading-tight">{metaRapor.kopSekolah.namaSekolah}</p>
+                            <p className="mt-1 text-[9px] font-semibold">{metaRapor.kopSekolah.akreditasi} • {metaRapor.kopSekolah.npsn}</p>
+                            <p className="text-[9px] leading-snug">{metaRapor.kopSekolah.alamat}</p>
+                            <p className="text-[9px] leading-snug text-slate-600">{metaRapor.kopSekolah.kontak}</p>
+                          </div>
+                        )
+                      )}
+                      <p className="text-xs font-black uppercase leading-snug">{metaRapor.judulLaporan.baris1}</p>
+                      <p className="text-[11px] font-bold uppercase leading-snug">{metaRapor.judulLaporan.baris2}</p>
+                      <p className="text-[10px] font-semibold uppercase leading-snug">{metaRapor.judulLaporan.baris3}</p>
+                      <div className="mt-2 border-t border-slate-300 pt-2 text-left text-[10px] leading-relaxed">
+                        <p><span className="inline-block w-20 font-semibold text-slate-600">Nama Siswa</span>: {selectedStudent.nama}</p>
+                        <p><span className="inline-block w-20 font-semibold text-slate-600">NIS</span>: {selectedStudent.nis}</p>
+                        <p><span className="inline-block w-20 font-semibold text-slate-600">Kelas</span>: {selectedStudent.kelas}</p>
+                      </div>
+                      <div className="mt-2 flex justify-between gap-2 border-t border-slate-200 pt-2 text-left text-[9px] leading-snug">
+                        <p className="min-w-0 flex-1"><span className="block font-bold">Kepala Sekolah</span>{metaRapor.kepalaSekolah.nama}</p>
+                        <p className="min-w-0 flex-1 text-right"><span className="block font-bold">Guru Kelas</span>{metaRapor.guruKelas.nama}</p>
+                      </div>
+                      <p className="mt-1 text-right text-[9px] text-slate-600">{metaRapor.tempatRaport}, {metaRapor.tanggalRaport}</p>
+                    </div>
+                    <div className="rounded-lg border border-blue-200 bg-white p-2.5 text-[11px] leading-relaxed text-slate-700">
+                      <p><strong>Sumber data:</strong> identitas sekolah dan penandatangan dari Firebase <code>/app_settings</code>; siswa dan nilai dari <code>/students</code>; gambar kop tersimpan di browser ini.</p>
+                      <p className="mt-1">Data lokal terakhir dapat digunakan saat koneksi tidak tersedia. Cocokkan NPSN, akreditasi, alamat, dan nama pejabat dengan dokumen resmi sekolah sebelum mencetak.</p>
+                    </div>
+                  </section>
+
                   {/* TOMBOL SIMPAN PERSONALISASI SEKOLAH KE FIREBASE /app_settings */}
                   {currentUser?.role === 'admin' && (
                     <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-500 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -7872,13 +7916,13 @@ export default function App() {
                           <h1 className="text-base sm:text-xl font-black uppercase tracking-wide text-black my-0.5">
                             {metaRapor.kopSekolah.namaSekolah}
                           </h1>
-                          <p className="text-[10.5px] font-bold text-slate-700">
+                          <p className="text-[11px] font-bold leading-snug text-slate-700">
                             {metaRapor.kopSekolah.akreditasi} • {metaRapor.kopSekolah.npsn}
                           </p>
-                          <p className="text-[10px] text-slate-600">
+                          <p className="text-[10.5px] leading-snug text-slate-600">
                             {metaRapor.kopSekolah.alamat}
                           </p>
-                          <p className="text-[9.5px] text-slate-500 italic">
+                          <p className="text-[10px] leading-snug text-slate-500 italic">
                             {metaRapor.kopSekolah.kontak}
                           </p>
                         </div>
@@ -7906,17 +7950,17 @@ export default function App() {
                 {/* 3 BARIS JUDUL LAPORAN RESMI (TERHUBUNG 100% KE DATABASE KOTAK 4) */}
                 <div className="text-center my-3 space-y-0.5">
                   {metaRapor.judulLaporan.baris1 && (
-                    <h1 className="text-sm sm:text-base font-black uppercase tracking-wider text-black leading-tight">
+                    <h1 className="text-base sm:text-lg font-black uppercase tracking-wide text-black leading-tight">
                       {metaRapor.judulLaporan.baris1}
                     </h1>
                   )}
                   {metaRapor.judulLaporan.baris2 && (
-                    <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-black leading-tight">
+                    <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-black leading-tight">
                       {metaRapor.judulLaporan.baris2}
                     </h2>
                   )}
                   {metaRapor.judulLaporan.baris3 && (
-                    <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-800 leading-tight">
+                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wide text-slate-800 leading-tight">
                       {metaRapor.judulLaporan.baris3}
                     </h3>
                   )}
@@ -7928,16 +7972,16 @@ export default function App() {
                     <table className="border-none w-auto mb-1">
                       <tbody>
                         <tr>
-                          <td className="border-none py-1 pr-4 font-bold w-28 text-slate-800 text-[11px]">Nama Siswa</td>
-                          <td className="border-none py-1 font-bold uppercase tracking-wide text-[13px] leading-snug text-black">: {selectedStudent.nama}</td>
+                          <td className="border-none py-1 pr-4 font-bold w-28 text-slate-800 text-xs">Nama Siswa</td>
+                          <td className="border-none py-1 font-bold uppercase tracking-wide text-sm leading-snug text-black">: {selectedStudent.nama}</td>
                         </tr>
                         <tr>
-                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800 text-[11px]">NIS</td>
-                          <td className="border-none py-0.5 font-mono font-bold text-[11px] text-black">: {selectedStudent.nis}</td>
+                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800 text-xs">NIS</td>
+                          <td className="border-none py-0.5 font-mono font-bold text-xs text-black">: {selectedStudent.nis}</td>
                         </tr>
                         <tr>
-                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800">Kelas</td>
-                          <td className="border-none py-0.5 font-bold text-black">: {selectedStudent.kelas}</td>
+                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800 text-xs">Kelas</td>
+                          <td className="border-none py-0.5 font-bold text-xs text-black">: {selectedStudent.kelas}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -8406,7 +8450,7 @@ export default function App() {
                       <p className="font-black underline uppercase text-black">
                         {metaRapor.kepalaSekolah.nama}
                       </p>
-                      <p className="font-mono text-[10px] text-slate-700 font-semibold">
+                      <p className="font-mono text-[11px] text-slate-700 font-semibold">
                         NIY. {metaRapor.kepalaSekolah.niy}
                       </p>
                     </div>
@@ -8420,7 +8464,7 @@ export default function App() {
                       <p className="font-black underline uppercase text-black">
                         {metaRapor.guruKelas.nama}
                       </p>
-                      <p className="font-mono text-[10px] text-slate-700 font-semibold">
+                      <p className="font-mono text-[11px] text-slate-700 font-semibold">
                         NIY. {metaRapor.guruKelas.niy}
                       </p>
                     </div>

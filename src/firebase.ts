@@ -50,4 +50,6 @@ export interface AppSettings {
   tanggalRaport: string;
   kepalaSekolahNama: string;
   kepalaSekolahNiy: string;
+  guruKelasNama?: string;
+  guruKelasNiy?: string;
 }
