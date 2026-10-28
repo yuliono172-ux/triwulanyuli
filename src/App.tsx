@@ -5515,9 +5515,9 @@ export default function App() {
                       <p className="text-[11px] font-bold uppercase leading-snug">{metaRapor.judulLaporan.baris2}</p>
                       <p className="text-[10px] font-semibold uppercase leading-snug">{metaRapor.judulLaporan.baris3}</p>
                       <div className="mt-2 border-t border-slate-300 pt-2 text-left text-[10px] leading-relaxed">
-                        <p><span className="inline-block w-20 font-semibold text-slate-600">Nama Siswa</span>: {selectedStudent.nama}</p>
-                        <p><span className="inline-block w-20 font-semibold text-slate-600">NIS</span>: {selectedStudent.nis}</p>
-                        <p><span className="inline-block w-20 font-semibold text-slate-600">Kelas</span>: {selectedStudent.kelas}</p>
+                        <p><span className="inline-block w-20 font-semibold text-slate-600">Nama Siswa</span>: {selectedStudent?.nama || 'Belum ada data siswa'}</p>
+                        <p><span className="inline-block w-20 font-semibold text-slate-600">NIS</span>: {selectedStudent?.nis || '-'}</p>
+                        <p><span className="inline-block w-20 font-semibold text-slate-600">Kelas</span>: {selectedStudent?.kelas || '-'}</p>
                       </div>
                       <div className="mt-2 flex justify-between gap-2 border-t border-slate-200 pt-2 text-left text-[9px] leading-snug">
                         <p className="min-w-0 flex-1"><span className="block font-bold">Kepala Sekolah</span>{metaRapor.kepalaSekolah.nama}</p>
