@@ -2062,11 +2062,11 @@ export default function App() {
               </svg>
             </div>
             <div style="flex: 1; text-align: center; padding: 0 10px;">
-              <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: #222; letter-spacing: 0.5px;">${metaRapor.kopSekolah.instansi}</div>
-              <div style="font-size: 18px; font-weight: 900; text-transform: uppercase; color: #000; margin: 2px 0;">${metaRapor.kopSekolah.namaSekolah}</div>
+              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #222; letter-spacing: 0.3px;">${metaRapor.kopSekolah.instansi}</div>
+              <div style="font-size: 15px; font-weight: 900; text-transform: uppercase; color: #000; margin: 2px 0;">${metaRapor.kopSekolah.namaSekolah}</div>
               <div style="font-size: 11px; font-weight: bold; color: #333;">NPSN: ${metaRapor.kopSekolah.npsn} • ${metaRapor.kopSekolah.akreditasi}</div>
-              <div style="font-size: 10px; color: #444;">${metaRapor.kopSekolah.alamat}</div>
-              <div style="font-size: 9.5px; color: #666; font-style: italic;">${metaRapor.kopSekolah.kontak}</div>
+              <div style="font-size: 11px; line-height: 1.35; color: #444;">${metaRapor.kopSekolah.alamat}</div>
+              <div style="font-size: 11px; line-height: 1.35; color: #666; font-style: italic;">${metaRapor.kopSekolah.kontak}</div>
             </div>
             <div style="width: 75px; height: 75px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
               <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
@@ -2087,18 +2087,22 @@ export default function App() {
 
     const studentInfoHtml = infoStyle === 'simple' ? `
       <div style="margin-bottom: 12px; font-size: 11px; font-weight: bold; line-height: 1.6;">
-        <table style="border: none; width: min(100%, 420px); margin-bottom: 0; border-collapse: collapse;">
+        <table style="border: none; width: min(100%, 420px); margin-bottom: 0; border-collapse: collapse; table-layout: fixed;">
+          <colgroup><col style="width: 100px;"><col style="width: 12px;"><col></colgroup>
           <tr>
-            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; width: 95px; font-size: 11px; line-height: 1.4;">Nama Siswa</td>
-            <td style="border: none; padding: 2px 4px; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.2px; line-height: 1.4;">: ${student.nama}</td>
+            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; font-size: 12px; line-height: 1.4;">Nama Siswa</td>
+            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 12px; line-height: 1.4;">:</td>
+            <td style="border: none; padding: 2px 4px; font-weight: bold; text-transform: uppercase; font-size: 12px; line-height: 1.4;">${student.nama}</td>
           </tr>
           <tr>
-            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; font-size: 11px; line-height: 1.4;">NIS</td>
-            <td style="border: none; padding: 2px 4px; font-family: monospace; font-weight: bold; font-size: 11px; line-height: 1.4;">: ${student.nis}</td>
+            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; font-size: 12px; line-height: 1.4;">NIS</td>
+            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 12px; line-height: 1.4;">:</td>
+            <td style="border: none; padding: 2px 4px; font-weight: bold; font-size: 12px; line-height: 1.4;">${student.nis}</td>
           </tr>
           <tr>
-            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; font-size: 11px; line-height: 1.4;">Kelas</td>
-            <td style="border: none; padding: 2px 4px; font-weight: bold; font-size: 11px; line-height: 1.4;">: ${student.kelas}</td>
+            <td style="border: none; padding: 2px 6px 2px 0; font-weight: bold; font-size: 12px; line-height: 1.4;">Kelas</td>
+            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 12px; line-height: 1.4;">:</td>
+            <td style="border: none; padding: 2px 4px; font-weight: bold; font-size: 12px; line-height: 1.4;">${student.kelas}</td>
           </tr>
         </table>
       </div>
@@ -2169,9 +2173,9 @@ export default function App() {
 
       <!-- 3 BARIS JUDUL LAPORAN DARI DATABASE -->
       <div style="text-align: center; margin: 10px 0 14px 0;">
-        ${metaRapor.judulLaporan.baris1 ? `<div style="font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000;">${metaRapor.judulLaporan.baris1}</div>` : ''}
+        ${metaRapor.judulLaporan.baris1 ? `<div style="font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3px; color: #000;">${metaRapor.judulLaporan.baris1}</div>` : ''}
         ${metaRapor.judulLaporan.baris2 ? `<div style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: #111; margin-top: 2px;">${metaRapor.judulLaporan.baris2}</div>` : ''}
-        ${metaRapor.judulLaporan.baris3 ? `<div style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #333; margin-top: 2px;">${metaRapor.judulLaporan.baris3}</div>` : ''}
+        ${metaRapor.judulLaporan.baris3 ? `<div style="font-size: 13px; font-weight: bold; text-transform: uppercase; color: #333; margin-top: 2px;">${metaRapor.judulLaporan.baris3}</div>` : ''}
       </div>
 
       <!-- IDENTITAS SISWA -->
@@ -2210,14 +2214,14 @@ export default function App() {
             <tr style="text-align: center; vertical-align: top;">
               <td style="width: 50%; border: none; font-size: 11px; text-align: center;">
                 Mengetahui,<br><strong>Kepala Sekolah</strong><br><br><br><br><br>
-                <strong style="text-decoration: underline; text-transform: uppercase; font-size: 11.5px;">${metaRapor.kepalaSekolah.nama}</strong><br>
-                <span style="font-family: monospace; font-size: 10px;">NIY. ${metaRapor.kepalaSekolah.niy}</span>
+                <strong style="text-decoration: underline; text-transform: uppercase; font-size: 12px;">${metaRapor.kepalaSekolah.nama}</strong><br>
+                <span style="font-size: 12px;">NIY. ${metaRapor.kepalaSekolah.niy}</span>
               </td>
               <td style="width: 50%; border: none; font-size: 11px; text-align: center;">
                 ${metaRapor.tempatRaport}, ${metaRapor.tanggalRaport}<br>
                 <strong>Guru Kelas IV</strong><br><br><br><br><br>
-                <strong style="text-decoration: underline; text-transform: uppercase; font-size: 11.5px;">${metaRapor.guruKelas.nama}</strong><br>
-                <span style="font-family: monospace; font-size: 10px;">NIY. ${metaRapor.guruKelas.niy}</span>
+                <strong style="text-decoration: underline; text-transform: uppercase; font-size: 12px;">${metaRapor.guruKelas.nama}</strong><br>
+                <span style="font-size: 12px;">NIY. ${metaRapor.guruKelas.niy}</span>
               </td>
             </tr>
           </tbody>
@@ -7910,19 +7914,19 @@ export default function App() {
 
                         {/* IDENTITAS KOP (TENGAH) */}
                         <div className="flex-1 text-center px-2">
-                          <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-800">
+                          <h3 className="text-xs font-extrabold uppercase tracking-wide text-slate-800">
                             {metaRapor.kopSekolah.instansi}
                           </h3>
-                          <h1 className="text-base sm:text-xl font-black uppercase tracking-wide text-black my-0.5">
+                          <h1 className="text-[15px] font-black uppercase tracking-wide text-black my-0.5">
                             {metaRapor.kopSekolah.namaSekolah}
                           </h1>
                           <p className="text-[11px] font-bold leading-snug text-slate-700">
                             {metaRapor.kopSekolah.akreditasi} • {metaRapor.kopSekolah.npsn}
                           </p>
-                          <p className="text-[10.5px] leading-snug text-slate-600">
+                          <p className="text-[11px] leading-snug text-slate-600">
                             {metaRapor.kopSekolah.alamat}
                           </p>
-                          <p className="text-[10px] leading-snug text-slate-500 italic">
+                          <p className="text-[11px] leading-snug text-slate-500 italic">
                             {metaRapor.kopSekolah.kontak}
                           </p>
                         </div>
@@ -7950,17 +7954,17 @@ export default function App() {
                 {/* 3 BARIS JUDUL LAPORAN RESMI (TERHUBUNG 100% KE DATABASE KOTAK 4) */}
                 <div className="text-center my-3 space-y-0.5">
                   {metaRapor.judulLaporan.baris1 && (
-                    <h1 className="text-base sm:text-lg font-black uppercase tracking-wide text-black leading-tight">
+                    <h1 className="text-[13px] font-black uppercase tracking-wide text-black leading-tight">
                       {metaRapor.judulLaporan.baris1}
                     </h1>
                   )}
                   {metaRapor.judulLaporan.baris2 && (
-                    <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-black leading-tight">
+                    <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-black leading-tight">
                       {metaRapor.judulLaporan.baris2}
                     </h2>
                   )}
                   {metaRapor.judulLaporan.baris3 && (
-                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wide text-slate-800 leading-tight">
+                    <h3 className="text-[13px] font-bold uppercase tracking-wide text-slate-800 leading-tight">
                       {metaRapor.judulLaporan.baris3}
                     </h3>
                   )}
@@ -7969,19 +7973,27 @@ export default function App() {
                 {/* 2. IDENTITAS PESERTA DIDIK (FORMAT RINGKAS ATAU TABEL) */}
                 {studentInfoStyle === 'simple' ? (
                   <div className="mb-3 text-xs font-bold leading-relaxed">
-                    <table className="border-none w-auto mb-1">
+                    <table className="w-full max-w-[420px] table-fixed border-none mb-1 text-xs">
+                      <colgroup>
+                        <col className="w-[100px]" />
+                        <col className="w-[12px]" />
+                        <col />
+                      </colgroup>
                       <tbody>
                         <tr>
-                          <td className="border-none py-1 pr-4 font-bold w-28 text-slate-800 text-xs">Nama Siswa</td>
-                          <td className="border-none py-1 font-bold uppercase tracking-wide text-sm leading-snug text-black">: {selectedStudent.nama}</td>
+                          <td className="border-none py-1 pr-2 font-bold text-slate-800 text-xs">Nama Siswa</td>
+                          <td className="border-none py-1 font-bold text-black">:</td>
+                          <td className="border-none py-1 font-bold uppercase tracking-wide text-xs leading-snug text-black">{selectedStudent.nama}</td>
                         </tr>
                         <tr>
-                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800 text-xs">NIS</td>
-                          <td className="border-none py-0.5 font-mono font-bold text-xs text-black">: {selectedStudent.nis}</td>
+                          <td className="border-none py-0.5 pr-2 font-bold text-slate-800 text-xs">NIS</td>
+                          <td className="border-none py-0.5 font-bold text-black">:</td>
+                          <td className="border-none py-0.5 font-bold text-xs text-black">{selectedStudent.nis}</td>
                         </tr>
                         <tr>
-                          <td className="border-none py-0.5 pr-4 font-bold text-slate-800 text-xs">Kelas</td>
-                          <td className="border-none py-0.5 font-bold text-xs text-black">: {selectedStudent.kelas}</td>
+                          <td className="border-none py-0.5 pr-2 font-bold text-slate-800 text-xs">Kelas</td>
+                          <td className="border-none py-0.5 font-bold text-black">:</td>
+                          <td className="border-none py-0.5 font-bold text-xs text-black">{selectedStudent.kelas}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -8447,10 +8459,10 @@ export default function App() {
                       <p className="font-semibold text-black mb-16">
                         Mengetahui,<br />Kepala Sekolah
                       </p>
-                      <p className="font-black underline uppercase text-black">
+                      <p className="font-black underline uppercase text-xs text-black">
                         {metaRapor.kepalaSekolah.nama}
                       </p>
-                      <p className="font-mono text-[11px] text-slate-700 font-semibold">
+                      <p className="text-xs text-slate-700 font-semibold">
                         NIY. {metaRapor.kepalaSekolah.niy}
                       </p>
                     </div>
@@ -8461,10 +8473,10 @@ export default function App() {
                         {metaRapor.tempatRaport}, {metaRapor.tanggalRaport}<br />
                         Guru Kelas IV,
                       </p>
-                      <p className="font-black underline uppercase text-black">
+                      <p className="font-black underline uppercase text-xs text-black">
                         {metaRapor.guruKelas.nama}
                       </p>
-                      <p className="font-mono text-[11px] text-slate-700 font-semibold">
+                      <p className="text-xs text-slate-700 font-semibold">
                         NIY. {metaRapor.guruKelas.niy}
                       </p>
                     </div>
