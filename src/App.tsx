@@ -77,7 +77,16 @@ import {
   DimensionPredictionItem
 } from './utils/quarterPrediction';
 import { PerbandinganTriwulan } from './components/PerbandinganTriwulan';
-import { db, ref, set, onValue, remove, TeacherRecord, AppSettings } from './firebase';
+import {
+  db,
+  firebaseConfigError,
+  ref,
+  set,
+  onValue,
+  remove,
+  TeacherRecord,
+  AppSettings
+} from './firebase';
 import { useToast } from './components/Toast';
 import { readSheet } from 'read-excel-file/browser';
 import { strToU8, zipSync } from 'fflate';
@@ -1259,7 +1268,7 @@ export default function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState<boolean>(false);
-  const [firebaseConnected, setFirebaseConnected] = useState<boolean>(true);
+  const [firebaseConnected, setFirebaseConnected] = useState<boolean>(db !== null);
 
   // Teachers State (stored at Firebase node /teachers)
   const [teachersList, setTeachersList] = useState<TeacherRecord[]>([]);
@@ -1447,6 +1456,11 @@ export default function App() {
 
   // 1. SINKRONISASI REALTIME FIREBASE: /students
   useEffect(() => {
+    if (!db) {
+      setFirebaseConnected(false);
+      return;
+    }
+
     const studentsRef = ref(db, 'students');
     const unsubscribe = onValue(
       studentsRef,
@@ -1481,6 +1495,8 @@ export default function App() {
 
   // 2. SINKRONISASI REALTIME FIREBASE: /teachers
   useEffect(() => {
+    if (!db) return;
+
     const teachersRef = ref(db, 'teachers');
     const unsubscribe = onValue(
       teachersRef,
@@ -1522,6 +1538,8 @@ export default function App() {
 
   // 3. SINKRONISASI REALTIME FIREBASE: /app_settings
   useEffect(() => {
+    if (!db) return;
+
     const settingsRef = ref(db, 'app_settings');
     const unsubscribe = onValue(
       settingsRef,
@@ -1586,10 +1604,19 @@ export default function App() {
 
   // FUNGSI SIMPAN DATA SISWA KE FIREBASE DENGAN TOAST NOTIFICATION
   const saveStudentsToFirebase = async (newStudents: StudentRecord[], customMsg?: string) => {
+    const normalizedStudents = normalizeStudentRecords(newStudents);
+    if (!db) {
+      setMasterStudents(normalizedStudents);
+      toastInfo(
+        'Firebase Belum Tersedia',
+        'Perubahan siswa disimpan di browser ini. Lengkapi konfigurasi Firebase untuk menyinkronkan data antarperangkat.'
+      );
+      return true;
+    }
+
     setIsFirebaseSyncing(true);
     try {
       const studentsRef = ref(db, 'students');
-      const normalizedStudents = normalizeStudentRecords(newStudents);
       await set(studentsRef, normalizedStudents.length > 0 ? normalizedStudents : { __emptyDatabase: true });
       setMasterStudents(normalizedStudents);
       toastSuccess(
@@ -1640,6 +1667,10 @@ export default function App() {
       toastError('Form Tidak Lengkap', 'Nama, Username, dan Password guru wajib diisi!');
       return;
     }
+    if (!db) {
+      toastError('Firebase Belum Tersedia', 'Konfigurasi Firebase diperlukan untuk menyimpan data guru.');
+      return;
+    }
 
     setIsFirebaseSyncing(true);
     try {
@@ -1673,6 +1704,10 @@ export default function App() {
   // FUNGSI HAPUS GURU DARI FIREBASE DENGAN TOAST NOTIFICATION
   const handleDeleteTeacher = async (id: string, name: string) => {
     if (!confirm(`Yakin ingin menghapus guru "${name}"?`)) return;
+    if (!db) {
+      toastError('Firebase Belum Tersedia', 'Konfigurasi Firebase diperlukan untuk menghapus data guru.');
+      return;
+    }
     setIsFirebaseSyncing(true);
     try {
       const teacherRef = ref(db, `teachers/${id}`);
@@ -1688,6 +1723,10 @@ export default function App() {
 
   // FUNGSI SIMPAN PERSONALISASI APLIKASI (APP SETTINGS) KE FIREBASE
   const handleSaveAppSettings = async () => {
+    if (!db) {
+      toastError('Firebase Belum Tersedia', 'Konfigurasi Firebase diperlukan untuk menyimpan pengaturan ke semua perangkat.');
+      return;
+    }
     setIsFirebaseSyncing(true);
     try {
       const settingsRef = ref(db, 'app_settings');
@@ -3257,10 +3296,16 @@ export default function App() {
                   ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200'
                   : 'bg-rose-950/80 border-rose-400 text-rose-200'
               }`}
-              title={firebaseConnected ? 'Terhubung ke Firebase Realtime Database' : 'Jaringan Firebase Terputus'}
+              title={
+                firebaseConnected
+                  ? 'Terhubung ke Firebase Realtime Database'
+                  : firebaseConfigError || 'Jaringan Firebase terputus'
+              }
             >
               <span className={`w-2 h-2 rounded-full ${firebaseConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-              <span className="hidden md:inline">{firebaseConnected ? 'RTDB Aktif' : 'Offline'}</span>
+              <span className="hidden md:inline">
+                {firebaseConnected ? 'RTDB Aktif' : db ? 'Offline' : 'Firebase Belum Diatur'}
+              </span>
             </div>
 
             {/* Periode Aktif */}

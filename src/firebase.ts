@@ -20,15 +20,17 @@ interface FirebaseClientOptions {
   measurementId?: string;
 }
 
+const readFirebaseEnv = (value: string | undefined): string => value?.trim() || '';
+
 const firebaseConfig: FirebaseClientOptions = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || undefined,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || undefined,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined
+  apiKey: readFirebaseEnv(import.meta.env.VITE_FIREBASE_API_KEY),
+  authDomain: readFirebaseEnv(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
+  databaseURL: readFirebaseEnv(import.meta.env.VITE_FIREBASE_DATABASE_URL),
+  projectId: readFirebaseEnv(import.meta.env.VITE_FIREBASE_PROJECT_ID),
+  storageBucket: readFirebaseEnv(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET) || undefined,
+  messagingSenderId: readFirebaseEnv(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID) || undefined,
+  appId: readFirebaseEnv(import.meta.env.VITE_FIREBASE_APP_ID),
+  measurementId: readFirebaseEnv(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) || undefined
 };
 
 const requiredFirebaseConfig: {
@@ -42,18 +44,34 @@ const requiredFirebaseConfig: {
   { key: 'appId', envName: 'VITE_FIREBASE_APP_ID' }
 ];
 const missingFirebaseConfig = requiredFirebaseConfig
-  .filter(({ key }) => !firebaseConfig[key])
+  .filter(({ key }) => {
+    const value = firebaseConfig[key];
+    return !value || /^(your_|placeholder|example)/i.test(value);
+  })
   .map(({ envName }) => envName);
 
-if (missingFirebaseConfig.length > 0) {
-  throw new Error(
-    `Firebase configuration is missing: ${missingFirebaseConfig.join(', ')}. ` +
-    'Copy .env.example to .env.local and provide the Firebase web app settings.'
-  );
-}
+const firebaseClient = (() => {
+  if (missingFirebaseConfig.length > 0) {
+    return {
+      app: null,
+      db: null,
+      error: `Firebase belum dikonfigurasi. Variabel yang diperlukan: ${missingFirebaseConfig.join(', ')}.`
+    };
+  }
 
-export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const db = getDatabase(app);
+  try {
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    return { app, db: getDatabase(app), error: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('Firebase initialization failed:', error);
+    return { app: null, db: null, error: `Firebase gagal diinisialisasi: ${message}` };
+  }
+})();
+
+export const app = firebaseClient.app;
+export const db = firebaseClient.db;
+export const firebaseConfigError = firebaseClient.error;
 
 export { ref, set, get, onValue, update, remove };
 
