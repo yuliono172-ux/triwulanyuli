@@ -38,18 +38,11 @@ export interface TeacherRecord {
 }
 
 export interface AppSettings {
-  instansi: string;
-  namaSekolah: string;
-  npsn: string;
-  akreditasi: string;
-  alamat: string;
-  kontak: string;
   activeTriwulan: 'T1' | 'T2' | 'T3' | 'T4';
-  tahunAjaran: string;
   tempatRaport: string;
   tanggalRaport: string;
   kepalaSekolahNama: string;
   kepalaSekolahNiy: string;
-  guruKelasNama?: string;
-  guruKelasNiy?: string;
+  guruKelasNama: string;
+  guruKelasNiy: string;
 }

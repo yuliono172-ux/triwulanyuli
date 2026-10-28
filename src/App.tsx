@@ -1372,19 +1372,9 @@ export default function App() {
       nama: 'Yuliono Nurokhim, S.Pd',
       niy: '89070107222028'
     },
-    kopSekolah: {
-      instansi: 'YAYASAN KHALIMUL KHASAN',
-      namaSekolah: 'SD KHALIMUL KHASAN 1 BILINGUAL SCHOOL',
-      npsn: 'NDS: 1002220005, NSS: 102030206038, NPSN: 20280456',
-      akreditasi: "TERAKREDITASI 'A'",
-      alamat: 'Alamat: Jl. Raya Majatengah Ds. Majatengah Kec. Kemangkon Kab. Purbalingga Pos 53381',
-      kontak: 'E-mail: sdkhalimulkhasan1@gmail.com, Telp: 085227181000',
-      judulRapor: 'LAPORAN PERKEMBANGAN SISWA TRIWULAN I',
-      tahunAjaran: 'TAHUN AJARAN 2026/2027'
-    },
     judulLaporan: {
       baris1: 'LAPORAN PERKEMBANGAN SISWA TRIWULAN I',
-      baris2: 'SD KHALIMUL KHASAN 1 BILINGUAL SCHOOL',
+      baris2: '',
       baris3: 'TAHUN AJARAN 2026/2027'
     }
   });
@@ -1489,25 +1479,12 @@ export default function App() {
               nama: val.guruKelasNama || prev.guruKelas.nama,
               niy: val.guruKelasNiy || prev.guruKelas.niy
             },
-            kopSekolah: {
-              ...prev.kopSekolah,
-              instansi: val.instansi || prev.kopSekolah.instansi,
-              namaSekolah: val.namaSekolah || prev.kopSekolah.namaSekolah,
-              npsn: val.npsn || prev.kopSekolah.npsn,
-              akreditasi: val.akreditasi || prev.kopSekolah.akreditasi,
-              alamat: val.alamat || prev.kopSekolah.alamat,
-              kontak: val.kontak || prev.kopSekolah.kontak,
-              tahunAjaran: val.tahunAjaran || prev.kopSekolah.tahunAjaran,
-              judulRapor: val.activeTriwulan
-                ? `LAPORAN PERKEMBANGAN SISWA ${val.activeTriwulan === 'T1' ? 'TRIWULAN I' : val.activeTriwulan === 'T2' ? 'TRIWULAN II' : val.activeTriwulan === 'T3' ? 'TRIWULAN III' : 'TRIWULAN IV'}`
-                : prev.kopSekolah.judulRapor
-            },
             judulLaporan: {
               baris1: val.activeTriwulan
                 ? `LAPORAN PERKEMBANGAN SISWA ${val.activeTriwulan === 'T1' ? 'TRIWULAN I' : val.activeTriwulan === 'T2' ? 'TRIWULAN II' : val.activeTriwulan === 'T3' ? 'TRIWULAN III' : 'TRIWULAN IV'}`
                 : prev.judulLaporan.baris1,
-              baris2: val.namaSekolah || prev.judulLaporan.baris2,
-              baris3: val.tahunAjaran ? `TAHUN AJARAN ${val.tahunAjaran}` : prev.judulLaporan.baris3
+              baris2: prev.judulLaporan.baris2,
+              baris3: prev.judulLaporan.baris3
             }
           }));
 
@@ -1655,14 +1632,7 @@ export default function App() {
     try {
       const settingsRef = ref(db, 'app_settings');
       const payload: AppSettings = {
-        instansi: metaRapor.kopSekolah.instansi,
-        namaSekolah: metaRapor.kopSekolah.namaSekolah,
-        npsn: metaRapor.kopSekolah.npsn,
-        akreditasi: metaRapor.kopSekolah.akreditasi,
-        alamat: metaRapor.kopSekolah.alamat,
-        kontak: metaRapor.kopSekolah.kontak,
         activeTriwulan,
-        tahunAjaran: metaRapor.kopSekolah.tahunAjaran,
         tempatRaport: metaRapor.tempatRaport,
         tanggalRaport: metaRapor.tanggalRaport,
         kepalaSekolahNama: metaRapor.kepalaSekolah.nama,
@@ -1673,7 +1643,7 @@ export default function App() {
       await set(settingsRef, payload);
       toastSuccess(
         'Pengaturan Personalisasi Disimpan',
-        'Nama sekolah, kop surat, periode aktif, dan tahun ajaran berhasil disimpan ke Firebase /app_settings secara realtime.'
+        'Periode aktif, tanggal raport, dan data penandatangan berhasil disimpan ke Firebase /app_settings.'
       );
     } catch (err: any) {
       console.error('Error saving app settings:', err);
@@ -2041,46 +2011,10 @@ export default function App() {
     }).join('');
 
     let kopHtml = '';
-    if (customKop) {
+    if (withKop && customKop) {
       kopHtml = `
         <div style="text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 4px;">
           <img src="${customKop}" style="max-width: 100%; max-height: 145px; object-fit: contain;" alt="Kop Surat Sekolah" />
-        </div>
-      `;
-    } else if (withKop) {
-      kopHtml = `
-        <div style="margin-bottom: 12px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
-            <div style="width: 75px; height: 75px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-              <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
-                <circle cx="50" cy="50" r="47" fill="#0070c0" stroke="#ffc000" stroke-width="3.5" />
-                <circle cx="50" cy="50" r="39" fill="#ffffff" stroke="#0070c0" stroke-width="2" />
-                <path d="M 27 58 Q 50 48 50 63 Q 50 48 73 58 L 73 42 Q 50 33 50 47 Q 50 33 27 42 Z" fill="#00b050" stroke="#004d00" stroke-width="1.5" />
-                <polygon points="50,23 53,31 62,31 55,36 58,44 50,39 42,44 45,36 38,31 47,31" fill="#ffc000" stroke="#b38600" stroke-width="1" />
-                <text x="50" y="78" text-anchor="middle" font-size="6.5" font-weight="900" fill="#002060" font-family="sans-serif">SD KHALIMUL KHASAN</text>
-                <text x="50" y="85" text-anchor="middle" font-size="5.5" font-weight="800" fill="#c00000" font-family="sans-serif">BILINGUAL SCHOOL</text>
-              </svg>
-            </div>
-            <div style="flex: 1; text-align: center; padding: 0 10px;">
-              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #222; letter-spacing: 0.3px;">${metaRapor.kopSekolah.instansi}</div>
-              <div style="font-size: 15px; font-weight: 900; text-transform: uppercase; color: #000; margin: 2px 0;">${metaRapor.kopSekolah.namaSekolah}</div>
-              <div style="font-size: 11px; font-weight: bold; color: #333;">NPSN: ${metaRapor.kopSekolah.npsn} • ${metaRapor.kopSekolah.akreditasi}</div>
-              <div style="font-size: 11px; line-height: 1.35; color: #444;">${metaRapor.kopSekolah.alamat}</div>
-              <div style="font-size: 11px; line-height: 1.35; color: #666; font-style: italic;">${metaRapor.kopSekolah.kontak}</div>
-            </div>
-            <div style="width: 75px; height: 75px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-              <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
-                <polygon points="50,6 94,84 6,84" fill="#0070c0" stroke="#ffc000" stroke-width="3" />
-                <polygon points="50,18 84,80 16,80" fill="#ffffff" />
-                <circle cx="50" cy="42" r="14" fill="#ffc000" stroke="#b38600" stroke-width="1" />
-                <path d="M 50 32 L 53 45 L 47 45 Z" fill="#c00000" />
-                <path d="M 32 64 Q 50 56 68 64 Q 50 72 32 64 Z" fill="#0070c0" />
-                <text x="50" y="74" text-anchor="middle" font-size="6.5" font-weight="900" fill="#002060" font-family="sans-serif">TUT WURI HANDAYANI</text>
-              </svg>
-            </div>
-          </div>
-          <div style="border-bottom: 3px solid #000; margin-top: 8px;"></div>
-          <div style="border-bottom: 1px solid #000; margin-top: 1.5px;"></div>
         </div>
       `;
     }
@@ -2122,12 +2056,6 @@ export default function App() {
             <tr style="border-bottom: 1px solid ${tableBorderColor};">
               <td style="padding: 4px 6px; font-weight: bold; background-color: ${accentBgColor}; border-right: 1px solid ${tableBorderColor};">Nomor Induk Siswa (NIS)</td>
               <td style="padding: 4px 6px; font-weight: bold; font-family: monospace; border-right: 1.5px solid ${tableBorderColor};">: ${student.nis}</td>
-              <td style="padding: 4px 6px; font-weight: bold; background-color: ${accentBgColor}; border-right: 1px solid ${tableBorderColor};">Fase / Semester</td>
-              <td style="padding: 4px 6px; font-weight: bold;">: Fase B / Semester I (Ganjil)</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 6px; font-weight: bold; background-color: ${accentBgColor}; border-right: 1px solid ${tableBorderColor};">Nama Sekolah</td>
-              <td style="padding: 4px 6px; font-weight: bold; border-right: 1.5px solid ${tableBorderColor};">: ${metaRapor.kopSekolah.namaSekolah}</td>
               <td style="padding: 4px 6px; font-weight: bold; background-color: ${accentBgColor}; border-right: 1px solid ${tableBorderColor};">Tanggal Raport</td>
               <td style="padding: 4px 6px; font-weight: bold;">: ${metaRapor.tempatRaport ? `${metaRapor.tempatRaport}, ` : ''}${metaRapor.tanggalRaport}</td>
             </tr>
@@ -5341,112 +5269,12 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* KOTAK 5: KOP & IDENTITAS SEKOLAH LENGKAP */}
-                  <div className="border-2 border-black rounded shadow-sm overflow-hidden">
-                    <div className="bg-[#d9d9d9] border-b-2 border-black p-1.5 text-center font-black text-xs uppercase tracking-wider">
-                      IDENTITAS KOP SEKOLAH RESMI
-                    </div>
-                    <div className="bg-[#00a2ed] divide-y border-black text-xs">
-                      <div className="flex">
-                        <span className="w-24 border-r-2 border-black p-1.5 font-bold uppercase text-black">
-                          INSTANSI
-                        </span>
-                        <input
-                          type="text"
-                          value={metaRapor.kopSekolah.instansi}
-                          onChange={(e) =>
-                            setMetaRapor({
-                              ...metaRapor,
-                              kopSekolah: { ...metaRapor.kopSekolah, instansi: e.target.value }
-                            })
-                          }
-                          className="flex-1 font-bold px-2 py-1.5 text-black bg-transparent focus:outline-none"
-                        />
-                      </div>
-                      <div className="flex">
-                        <span className="w-24 border-r-2 border-black p-1.5 font-bold uppercase text-black">
-                          SEKOLAH
-                        </span>
-                        <input
-                          type="text"
-                          value={metaRapor.kopSekolah.namaSekolah}
-                          onChange={(e) =>
-                            setMetaRapor({
-                              ...metaRapor,
-                              kopSekolah: { ...metaRapor.kopSekolah, namaSekolah: e.target.value }
-                            })
-                          }
-                          className="flex-1 font-black px-2 py-1.5 text-black bg-transparent focus:outline-none uppercase"
-                        />
-                      </div>
-                      <div className="flex">
-                        <span className="w-24 border-r-2 border-black p-1.5 font-bold uppercase text-black">
-                          NPSN & STATUS
-                        </span>
-                        <input
-                          type="text"
-                          value={metaRapor.kopSekolah.npsn}
-                          onChange={(e) =>
-                            setMetaRapor({
-                              ...metaRapor,
-                              kopSekolah: { ...metaRapor.kopSekolah, npsn: e.target.value }
-                            })
-                          }
-                          className="flex-1 px-2 py-1.5 text-black bg-transparent focus:outline-none"
-                          placeholder="NPSN"
-                        />
-                        <input
-                          type="text"
-                          value={metaRapor.kopSekolah.akreditasi}
-                          onChange={(e) =>
-                            setMetaRapor({
-                              ...metaRapor,
-                              kopSekolah: { ...metaRapor.kopSekolah, akreditasi: e.target.value }
-                            })
-                          }
-                          className="w-32 border-l border-black px-2 py-1.5 text-black bg-transparent focus:outline-none"
-                          placeholder="Akreditasi"
-                        />
-                      </div>
-                      <div className="flex">
-                        <span className="w-24 border-r-2 border-black p-1.5 font-bold uppercase text-black">
-                          ALAMAT
-                        </span>
-                        <input
-                          type="text"
-                          value={metaRapor.kopSekolah.alamat}
-                          onChange={(e) =>
-                            setMetaRapor({
-                              ...metaRapor,
-                              kopSekolah: { ...metaRapor.kopSekolah, alamat: e.target.value }
-                            })
-                          }
-                          className="flex-1 px-2 py-1.5 text-black bg-transparent focus:outline-none text-[11px]"
-                        />
-                      </div>
-                      <div className="flex">
-                        <span className="w-24 border-r-2 border-black p-1.5 font-bold uppercase text-black">
-                          KONTAK/WEB
-                        </span>
-                        <input
-                          type="text"
-                          value={metaRapor.kopSekolah.kontak}
-                          onChange={(e) =>
-                            setMetaRapor({
-                              ...metaRapor,
-                              kopSekolah: { ...metaRapor.kopSekolah, kontak: e.target.value }
-                            })
-                          }
-                          className="flex-1 px-2 py-1.5 text-black bg-transparent focus:outline-none text-[11px]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* FITUR UPLOAD GAMBAR KOP SURAT SEKOLAH */}
-                    <div className="p-3 bg-amber-50 border-t-2 border-black flex flex-col gap-2">
+                  {/* UNGGAH KOP RESMI SEKOLAH */}
+                  <div className="border-2 border-amber-400 rounded-xl overflow-hidden shadow-sm">
+                    <div className="p-3 bg-amber-50 flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <span className="font-black text-xs uppercase text-slate-900 flex items-center gap-1.5">
-                          <Upload className="w-3.5 h-3.5 text-amber-700" /> FILE GAMBAR KOP SEKOLAH
+                          <Upload className="w-3.5 h-3.5 text-amber-700" /> KOP RESMI SEKOLAH
                         </span>
                         {uploadedKopImage && (
                           <span className="text-[10.5px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
@@ -5455,7 +5283,7 @@ export default function App() {
                         )}
                       </div>
                       <p className="text-[11px] text-slate-600 leading-snug">
-                        Gunakan fitur ini untuk mengunggah gambar kop resmi sekolah Anda (.png, .jpg) agar kop pada lembar cetak 100% sama persis dengan dokumen asli Anda.
+                        Unggah gambar kop baku dari sekolah (.png, .jpg) untuk digunakan langsung pada lembar cetak.
                       </p>
                       <div className="flex items-center gap-2 pt-1">
                         <input
@@ -5469,7 +5297,7 @@ export default function App() {
                           onClick={() => dbKopFileInputRef.current?.click()}
                           className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow transition"
                         >
-                          <Upload className="w-3.5 h-3.5" /> {uploadedKopImage ? 'Ganti File Kop' : 'Upload Kop Saya'}
+                          <Upload className="w-3.5 h-3.5" /> {uploadedKopImage ? 'Ganti Kop Sekolah' : 'Upload Kop Sekolah'}
                         </button>
                         {uploadedKopImage && (
                           <button
@@ -5498,19 +5326,13 @@ export default function App() {
                       Perubahan di atas langsung terlihat di sini dan pada lembar rapor resmi.
                     </p>
                     <div className="mx-auto w-full max-w-[360px] rounded-md border border-slate-300 bg-white p-3 text-center text-slate-900 shadow-sm">
-                      {showKopSekolah && (
-                        uploadedKopImage ? (
-                          <img src={uploadedKopImage} alt="Pratinjau kop sekolah" className="mb-2 max-h-14 w-full object-contain" />
-                        ) : (
-                          <div className="mb-2 border-b-2 border-double border-slate-800 pb-2">
-                            <p className="text-[10px] font-bold uppercase tracking-wide">{metaRapor.kopSekolah.instansi}</p>
-                            <p className="mt-0.5 text-xs font-black uppercase leading-tight">{metaRapor.kopSekolah.namaSekolah}</p>
-                            <p className="mt-1 text-[9px] font-semibold">{metaRapor.kopSekolah.akreditasi} • {metaRapor.kopSekolah.npsn}</p>
-                            <p className="text-[9px] leading-snug">{metaRapor.kopSekolah.alamat}</p>
-                            <p className="text-[9px] leading-snug text-slate-600">{metaRapor.kopSekolah.kontak}</p>
-                          </div>
-                        )
-                      )}
+                      {showKopSekolah && uploadedKopImage ? (
+                        <img src={uploadedKopImage} alt="Pratinjau kop sekolah" className="mb-2 max-h-14 w-full object-contain" />
+                      ) : showKopSekolah ? (
+                        <p className="mb-2 border-b-2 border-dashed border-slate-300 pb-2 text-[10px] text-slate-500">
+                          Unggah kop resmi sekolah untuk melihat pratinjau.
+                        </p>
+                      ) : null}
                       <p className="text-xs font-black uppercase leading-snug">{metaRapor.judulLaporan.baris1}</p>
                       <p className="text-[11px] font-bold uppercase leading-snug">{metaRapor.judulLaporan.baris2}</p>
                       <p className="text-[10px] font-semibold uppercase leading-snug">{metaRapor.judulLaporan.baris3}</p>
@@ -5526,8 +5348,8 @@ export default function App() {
                       <p className="mt-1 text-right text-[9px] text-slate-600">{metaRapor.tempatRaport}, {metaRapor.tanggalRaport}</p>
                     </div>
                     <div className="rounded-lg border border-blue-200 bg-white p-2.5 text-[11px] leading-relaxed text-slate-700">
-                      <p><strong>Sumber data:</strong> identitas sekolah dan penandatangan dari Firebase <code>/app_settings</code>; siswa dan nilai dari <code>/students</code>; gambar kop tersimpan di browser ini.</p>
-                      <p className="mt-1">Data lokal terakhir dapat digunakan saat koneksi tidak tersedia. Cocokkan NPSN, akreditasi, alamat, dan nama pejabat dengan dokumen resmi sekolah sebelum mencetak.</p>
+                      <p><strong>Sumber kop:</strong> gambar kop resmi yang diunggah, tersimpan di browser ini. Informasi identitas sekolah pada laporan berasal dari gambar tersebut.</p>
+                      <p className="mt-1">Data siswa dan nilai tetap berasal dari Firebase <code>/students</code>. Jika belum ada gambar kop, unggah salinan resmi sekolah sebelum mencetak.</p>
                     </div>
                   </section>
 
@@ -5539,7 +5361,7 @@ export default function App() {
                           Simpan Pengaturan Aplikasi (Admin)
                         </div>
                         <div className="text-[11px] text-amber-800">
-                          Sinkronkan nama sekolah, kop surat, periode, dan tahun ajaran ke Firebase node <code className="bg-amber-200 px-1 rounded font-bold">/app_settings</code>
+                          Sinkronkan periode, tanggal raport, dan data penandatangan ke Firebase node <code className="bg-amber-200 px-1 rounded font-bold">/app_settings</code>
                         </div>
                       </div>
                       <button
@@ -7868,87 +7690,32 @@ export default function App() {
                     className="bg-white mx-auto border-2 border-black p-6 sm:p-10 max-w-[210mm] text-black print:border-none print:p-0 print:m-0 print:max-w-none shadow-sm transition-all"
                   >
                 {/* 1. KOP SEKOLAH RESMI ATAU KOP GAMBAR UNGGAHAN PENGGUNA */}
-                {showKopSekolah && (
-                  uploadedKopImage ? (
-                    <div className="relative group text-center mb-3 pb-2 border-b-2 border-black">
-                      <img
-                        src={uploadedKopImage}
-                        alt="Kop Surat Resmi Sekolah"
-                        className="w-full max-h-36 sm:max-h-44 object-contain mx-auto"
-                      />
-                      <div className="mt-1 print:hidden flex items-center justify-center gap-2 text-xs">
-                        <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
-                          ✓ Menggunakan Kop Unggahan Anda
-                        </span>
-                        <button
-                          onClick={() => kopFileInputRef.current?.click()}
-                          className="text-blue-700 hover:underline font-semibold"
-                        >
-                          Ganti Gambar
-                        </button>
-                        <span className="text-slate-300">•</span>
-                        <button
-                          onClick={handleRemoveUploadedKop}
-                          className="text-red-600 hover:underline font-semibold"
-                        >
-                          Hapus / Reset
-                        </button>
-                      </div>
+                {showKopSekolah && uploadedKopImage && (
+                  <div className="relative group text-center mb-3 pb-2 border-b-2 border-black">
+                    <img
+                      src={uploadedKopImage}
+                      alt="Kop Surat Resmi Sekolah"
+                      className="w-full max-h-36 sm:max-h-44 object-contain mx-auto"
+                    />
+                    <div className="mt-1 print:hidden flex items-center justify-center gap-2 text-xs">
+                      <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
+                        ✓ Menggunakan Kop Resmi Sekolah
+                      </span>
+                      <button
+                        onClick={() => kopFileInputRef.current?.click()}
+                        className="text-blue-700 hover:underline font-semibold"
+                      >
+                        Ganti Gambar
+                      </button>
+                      <span className="text-slate-300">•</span>
+                      <button
+                        onClick={handleRemoveUploadedKop}
+                        className="text-red-600 hover:underline font-semibold"
+                      >
+                        Hapus / Reset
+                      </button>
                     </div>
-                  ) : (
-                    <div className="pb-1 mb-3">
-                      <div className="flex items-center justify-between gap-4">
-                        {/* LOGO SEKOLAH (KIRI) */}
-                        <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-                          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm">
-                            <circle cx="50" cy="50" r="47" fill="#0070c0" stroke="#ffc000" strokeWidth="3.5" />
-                            <circle cx="50" cy="50" r="39" fill="#ffffff" stroke="#0070c0" strokeWidth="2" />
-                            {/* Buku / Al-Qur'an Terbuka */}
-                            <path d="M 27 58 Q 50 48 50 63 Q 50 48 73 58 L 73 42 Q 50 33 50 47 Q 50 33 27 42 Z" fill="#00b050" stroke="#004d00" strokeWidth="1.5" />
-                            {/* Bintang Emas */}
-                            <polygon points="50,23 53,31 62,31 55,36 58,44 50,39 42,44 45,36 38,31 47,31" fill="#ffc000" stroke="#b38600" strokeWidth="1" />
-                            <text x="50" y="78" textAnchor="middle" fontSize="6.5" fontWeight="900" fill="#002060" fontFamily="sans-serif">SD KHALIMUL KHASAN</text>
-                            <text x="50" y="85" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="#c00000" fontFamily="sans-serif">BILINGUAL SCHOOL</text>
-                          </svg>
-                        </div>
-
-                        {/* IDENTITAS KOP (TENGAH) */}
-                        <div className="flex-1 text-center px-2">
-                          <h3 className="text-xs font-extrabold uppercase tracking-wide text-slate-800">
-                            {metaRapor.kopSekolah.instansi}
-                          </h3>
-                          <h1 className="text-[15px] font-black uppercase tracking-wide text-black my-0.5">
-                            {metaRapor.kopSekolah.namaSekolah}
-                          </h1>
-                          <p className="text-[11px] font-bold leading-snug text-slate-700">
-                            {metaRapor.kopSekolah.akreditasi} • {metaRapor.kopSekolah.npsn}
-                          </p>
-                          <p className="text-[11px] leading-snug text-slate-600">
-                            {metaRapor.kopSekolah.alamat}
-                          </p>
-                          <p className="text-[11px] leading-snug text-slate-500 italic">
-                            {metaRapor.kopSekolah.kontak}
-                          </p>
-                        </div>
-
-                        {/* LOGO PENDIDIKAN / TUT WURI (KANAN) */}
-                        <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-                          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm">
-                            <polygon points="50,6 94,84 6,84" fill="#0070c0" stroke="#ffc000" strokeWidth="3" />
-                            <polygon points="50,18 84,80 16,80" fill="#ffffff" />
-                            <circle cx="50" cy="42" r="14" fill="#ffc000" stroke="#b38600" strokeWidth="1" />
-                            <path d="M 50 32 L 53 45 L 47 45 Z" fill="#c00000" />
-                            <path d="M 32 64 Q 50 56 68 64 Q 50 72 32 64 Z" fill="#0070c0" />
-                            <text x="50" y="74" textAnchor="middle" fontSize="6.5" fontWeight="900" fill="#002060" fontFamily="sans-serif">TUT WURI HANDAYANI</text>
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* GARIS GANDA RESMI KOP SURAT */}
-                      <div className="border-b-[3px] border-black mt-2" />
-                      <div className="border-b-[1px] border-black mt-[1.5px]" />
-                    </div>
-                  )
+                  </div>
                 )}
 
                 {/* 3 BARIS JUDUL LAPORAN RESMI (TERHUBUNG 100% KE DATABASE KOTAK 4) */}
@@ -8053,32 +7820,6 @@ export default function App() {
                           </td>
                           <td className="p-1.5 font-mono font-bold text-black border-r" style={{ borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor }}>
                             : {selectedStudent.nis}
-                          </td>
-                          <td
-                            className="p-1.5 font-bold border-r text-slate-800"
-                            style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).accentBg,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
-                            }}
-                          >
-                            Fase / Semester
-                          </td>
-                          <td className="p-1.5 font-bold text-black">
-                            : Fase B / Semester I (Ganjil)
-                          </td>
-                        </tr>
-                        <tr>
-                          <td
-                            className="p-1.5 font-bold border-r text-slate-800"
-                            style={{
-                              backgroundColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).accentBg,
-                              borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor
-                            }}
-                          >
-                            Nama Sekolah
-                          </td>
-                          <td className="p-1.5 font-bold text-black border-r" style={{ borderColor: (TABLE_THEMES[tableThemeColor] || TABLE_THEMES.default).borderColor }}>
-                            : {metaRapor.kopSekolah.namaSekolah}
                           </td>
                           <td
                             className="p-1.5 font-bold border-r text-slate-800"
