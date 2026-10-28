@@ -79,6 +79,8 @@ import {
 import { PerbandinganTriwulan } from './components/PerbandinganTriwulan';
 import { db, ref, set, onValue, off, remove, TeacherRecord, AppSettings } from './firebase';
 import { useToast } from './components/Toast';
+import { readSheet } from 'read-excel-file/browser';
+import { strToU8, zipSync } from 'fflate';
 
 export interface UserAccount {
   role: 'admin' | 'guru' | 'orangtua';
@@ -1115,6 +1117,26 @@ const normalizeStudentRecords = (value: unknown): StudentRecord[] => {
     .sort((left, right) => left.no - right.no);
 };
 
+const STUDENT_IMPORT_HEADERS = ['NO', 'NAMA', 'NIS', 'KELAS', 'TAHUN AJARAN'] as const;
+
+const createStudentExcelTemplate = () => {
+  const cells = STUDENT_IMPORT_HEADERS.map((header, index) => {
+    const column = String.fromCharCode(65 + index);
+    return `<c r="${column}1" t="inlineStr"><is><t>${header}</t></is></c>`;
+  }).join('');
+  const workbookFiles = {
+    '[Content_Types].xml': strToU8('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'),
+    '_rels/.rels': strToU8('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'),
+    'xl/workbook.xml': strToU8('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Database Siswa" sheetId="1" r:id="rId1"/></sheets></workbook>'),
+    'xl/_rels/workbook.xml.rels': strToU8('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'),
+    'xl/worksheets/sheet1.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="18"/><sheetData><row r="1" ht="24" customHeight="1">${cells}</row></sheetData><autoFilter ref="A1:E1"/></worksheet>`)
+  };
+
+  return new Blob([zipSync(workbookFiles)], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+};
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [activeTriwulan, setActiveTriwulan] = useState<TriwulanKey>('T1');
@@ -1805,6 +1827,7 @@ export default function App() {
 
   const kopFileInputRef = useRef<HTMLInputElement | null>(null);
   const dbKopFileInputRef = useRef<HTMLInputElement | null>(null);
+  const studentImportInputRef = useRef<HTMLInputElement | null>(null);
 
   // State Kop Gambar yang diunggah pengguna (disimpan permanen di localStorage)
   const [uploadedKopImage, setUploadedKopImage] = useState<string | null>(() => {
@@ -2654,6 +2677,150 @@ export default function App() {
     } catch (e) {
       console.warn('Print iframe error:', e);
       window.print();
+    }
+  };
+
+  const handleDownloadStudentTemplate = () => {
+    const url = URL.createObjectURL(createStudentExcelTemplate());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'template-database-siswa.xlsx';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleStudentExcelImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+      toastError('Format File Tidak Didukung', 'Pilih file Excel .xlsx. File CSV tidak digunakan.');
+      return;
+    }
+
+    try {
+      const rows = await readSheet(file, 0);
+      const normalizeHeader = (value: unknown) => String(value ?? '').trim().toUpperCase().replace(/[._-]+/g, ' ').replace(/\s+/g, ' ');
+      const headerAliases: Record<string, string> = {
+        NO: 'no',
+        NOMOR: 'no',
+        'NOMOR URUT': 'no',
+        NAMA: 'nama',
+        'NAMA SISWA': 'nama',
+        NIS: 'nis',
+        NISN: 'nis',
+        KELAS: 'kelas',
+        ROMBEL: 'kelas',
+        'TAHUN AJARAN': 'tahunAjaran',
+        'TAHUN AKADEMIK': 'tahunAjaran'
+      };
+      const headerRowIndex = rows.findIndex((row) => row.some((cell) => headerAliases[normalizeHeader(cell)]));
+
+      if (headerRowIndex < 0) {
+        toastError('Header Tidak Ditemukan', 'Gunakan template Excel dengan header NAMA dan NIS.');
+        return;
+      }
+
+      const columns: Record<string, number> = {};
+      rows[headerRowIndex].forEach((cell, index) => {
+        const key = headerAliases[normalizeHeader(cell)];
+        if (key && columns[key] === undefined) columns[key] = index;
+      });
+
+      if (columns.nama === undefined || columns.nis === undefined) {
+        toastError('Header Belum Lengkap', 'Kolom NAMA dan NIS wajib tersedia pada file Excel.');
+        return;
+      }
+
+      const importedRows: Array<{ no?: number; nama: string; nis: string; kelas: string; tahunAjaran: string }> = [];
+      const invalidRows: number[] = [];
+      const seenNis = new Set<string>();
+
+      rows.slice(headerRowIndex + 1).forEach((row, rowOffset) => {
+        if (row.every((cell) => String(cell ?? '').trim() === '')) return;
+
+        const nama = String(row[columns.nama] ?? '').trim();
+        const nis = String(row[columns.nis] ?? '').trim();
+        if (!nama || !nis || seenNis.has(nis)) {
+          invalidRows.push(headerRowIndex + rowOffset + 2);
+          return;
+        }
+
+        seenNis.add(nis);
+        const noValue = columns.no === undefined ? '' : String(row[columns.no] ?? '').trim();
+        const parsedNo = /^\d+$/.test(noValue) ? Number(noValue) : undefined;
+        importedRows.push({
+          no: parsedNo && parsedNo > 0 ? parsedNo : undefined,
+          nama,
+          nis,
+          kelas: columns.kelas === undefined ? '' : String(row[columns.kelas] ?? '').trim(),
+          tahunAjaran: columns.tahunAjaran === undefined ? '' : String(row[columns.tahunAjaran] ?? '').trim()
+        });
+      });
+
+      if (invalidRows.length > 0) {
+        toastError(
+          'Data Excel Perlu Diperiksa',
+          `Nama/NIS kosong atau NIS ganda pada baris: ${invalidRows.slice(0, 8).join(', ')}${invalidRows.length > 8 ? ', ...' : ''}. Tidak ada data yang diimpor.`
+        );
+        return;
+      }
+
+      if (importedRows.length === 0) {
+        toastError('Data Excel Kosong', 'Tambahkan minimal satu baris siswa di bawah header template.');
+        return;
+      }
+
+      const mergedStudents = [...masterStudents];
+      const usedNumbers = new Set(masterStudents.map((student) => student.no));
+      let nextNumber = Math.max(0, ...usedNumbers) + 1;
+      let addedCount = 0;
+      let updatedCount = 0;
+
+      importedRows.forEach((row) => {
+        const existingIndex = mergedStudents.findIndex((student) => student.nis.trim() === row.nis);
+        if (existingIndex >= 0) {
+          const existing = mergedStudents[existingIndex];
+          mergedStudents[existingIndex] = {
+            ...existing,
+            nama: row.nama.toUpperCase(),
+            nis: row.nis,
+            kelas: row.kelas || existing.kelas,
+            tahunAjaran: row.tahunAjaran || existing.tahunAjaran
+          };
+          updatedCount += 1;
+          return;
+        }
+
+        let no = row.no && !usedNumbers.has(row.no) ? row.no : nextNumber;
+        while (usedNumbers.has(no)) no += 1;
+        usedNumbers.add(no);
+        nextNumber = Math.max(nextNumber, no + 1);
+        mergedStudents.push({
+          no,
+          nama: row.nama.toUpperCase(),
+          nis: row.nis,
+          kelas: row.kelas || 'IV (Empat)',
+          tahunAjaran: row.tahunAjaran || '2026/2027',
+          triwulan: {
+            T1: createEmptyAssessmentRecord(),
+            T2: createEmptyAssessmentRecord(),
+            T3: createEmptyAssessmentRecord(),
+            T4: createEmptyAssessmentRecord()
+          }
+        });
+        addedCount += 1;
+      });
+
+      mergedStudents.sort((left, right) => left.no - right.no);
+      await saveStudentsToFirebase(
+        mergedStudents,
+        `Impor Excel selesai: ${addedCount} siswa ditambahkan dan ${updatedCount} data identitas diperbarui. Nilai triwulan tetap dipertahankan.`
+      );
+    } catch (error) {
+      console.error('Gagal membaca file Excel siswa:', error);
+      toastError('Gagal Membaca Excel', 'Pastikan file .xlsx valid dan memiliki header pada lembar pertama.');
     }
   };
 
@@ -4798,7 +4965,7 @@ export default function App() {
                       DATABASE PESERTA DIDIK & IDENTITAS RAPOR
                     </h2>
                     <p className="text-[11px] text-emerald-700 font-semibold">
-                      *Tabel Siswa (Kiri) & Detail Hasil Cetak Rapor (Kanan) otomatis terhubung ke seluruh lembar penilaian & cetak rapor.
+                      Impor Excel .xlsx: kolom NAMA dan NIS wajib; NO, KELAS, dan TAHUN AJARAN opsional. Data nilai siswa yang sudah ada tetap tersimpan.
                     </p>
                   </div>
                 </div>
@@ -4829,35 +4996,29 @@ export default function App() {
                     >
                       + Tambah Siswa
                     </button>
+                    <input
+                      ref={studentImportInputRef}
+                      type="file"
+                      accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                      onChange={handleStudentExcelImport}
+                      className="hidden"
+                    />
                     <button
-                      onClick={() => {
-                        const raw = prompt('Tempel daftar nama siswa dari Excel (Format: NIS [tab] Nama atau cukup Nama per baris):');
-                        if (raw?.trim()) {
-                          const lines = raw.trim().split('\n');
-                          const parsed: StudentRecord[] = lines.map((line, idx) => {
-                            const parts = line.includes('\t') ? line.split('\t') : line.split(',');
-                            const nis = parts[0]?.trim() || `2023400${String(idx + 1).padStart(2, '0')}`;
-                            const nama = parts[1]?.trim() || parts[0]?.trim() || `Siswa ${idx + 1}`;
-                            return {
-                              no: idx + 1,
-                              nama: nama.toUpperCase(),
-                              nis,
-                              kelas: 'IV (Empat)',
-                              tahunAjaran: '2026/2027',
-                              triwulan: {
-                                T1: createEmptyAssessmentRecord(),
-                                T2: createEmptyAssessmentRecord(),
-                                T3: createEmptyAssessmentRecord(),
-                                T4: createEmptyAssessmentRecord()
-                              }
-                            };
-                          });
-                          saveStudentsToFirebase(parsed, `Berhasil mengimpor ${parsed.length} siswa ke Firebase Realtime Database!`);
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow cursor-pointer"
+                      onClick={handleDownloadStudentTemplate}
+                      className="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow cursor-pointer"
+                      title="Unduh template Excel dengan header database siswa"
                     >
-                      Paste dari Excel
+                      <Download className="w-3.5 h-3.5" />
+                      Template Excel
+                    </button>
+                    <button
+                      onClick={() => studentImportInputRef.current?.click()}
+                      disabled={isFirebaseSyncing}
+                      className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow cursor-pointer disabled:opacity-50"
+                      title="Impor identitas siswa dari file Excel .xlsx"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      Impor Excel
                     </button>
 
                     <button
