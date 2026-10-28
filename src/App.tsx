@@ -3186,22 +3186,6 @@ export default function App() {
                 <span>DATABASE</span>
               </button>
 
-              {/* 3. REKAP (DBTW) */}
-              <button
-                onClick={() => {
-                  setCurrentPage('dbtw');
-                  setIsMobileSidebarOpen(false);
-                }}
-                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center gap-2 transition border cursor-pointer ${
-                  currentPage === 'dbtw'
-                    ? 'bg-gradient-to-r from-[#00a2ed] to-[#0077b6] text-white border-white shadow-[0_2px_8px_rgba(0,162,237,0.5)] ring-2 ring-sky-300'
-                    : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-700/90 hover:text-white shadow-xs'
-                }`}
-              >
-                <Layers className="w-4 h-4 shrink-0 text-cyan-400" />
-                <span>REKAP (DBTW)</span>
-              </button>
-
               {/* Section Header: Periode Penilaian Accordion */}
               <div className="pt-1.5 pb-0.5">
                 <div className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center justify-between border-b border-slate-700/80">
@@ -3395,7 +3379,23 @@ export default function App() {
                 </span>
               </button>
 
-              {/* 8. PENGELOLAAN DATA GURU (AKSES ADMIN FIREBASE) */}
+              {/* 8. REKAP (DBTW) */}
+              <button
+                onClick={() => {
+                  setCurrentPage('dbtw');
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={`w-full py-1.5 px-2.5 rounded-lg font-black text-[11px] uppercase tracking-wide flex items-center gap-2 transition border cursor-pointer ${
+                  currentPage === 'dbtw'
+                    ? 'bg-gradient-to-r from-[#00a2ed] to-[#0077b6] text-white border-white shadow-[0_2px_8px_rgba(0,162,237,0.5)] ring-2 ring-sky-300'
+                    : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-700/90 hover:text-white shadow-xs'
+                }`}
+              >
+                <Layers className="w-4 h-4 shrink-0 text-cyan-400" />
+                <span>REKAP (DBTW)</span>
+              </button>
+
+              {/* 9. PENGELOLAAN DATA GURU (AKSES ADMIN FIREBASE) */}
               {currentUser?.role === 'admin' && (
                 <button
                   onClick={() => {
